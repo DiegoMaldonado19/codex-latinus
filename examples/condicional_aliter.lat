@@ -1,0 +1,23 @@
+// Cadena si / aliter (condicion) / aliter, y funciones especiales dentro
+// de bloques de control.
+VARIABILES>
+
+esto contador : numerus 120;
+
+MAIOR>
+
+si (contador > 100 && contador != 0) {
+    >> "Contador alto";
+} aliter (contador > 50) {
+    >> "Contador medio";
+} aliter (contador > 10) {
+    >> "Contador bajo";
+} aliter {
+    >> "Contador minimo";
+} finis;
+
+si (contador > 100) {
+    >> "Sin aliter";
+} finis;
+
+FINIS;

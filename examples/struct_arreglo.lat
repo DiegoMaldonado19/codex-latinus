@@ -1,0 +1,29 @@
+// Ejemplo Animal/Selva del enunciado: campo arreglo sin tamano dentro de la
+// structura, dimension al instanciar, y asignacion de un elemento sin ';'.
+VARIABILES>
+
+structura Animal {
+    esto nombre: textum,
+    esto apodo: textum
+} finis;
+
+structura Selva {
+    esto valido : verum,
+    series animales : Animal
+} finis;
+
+esto mi_selva: Selva {
+    valido: verum,
+    animales: Animal[7]
+}
+
+MAIOR>
+
+mi_selva.animales[1] = {
+    nombre:"Perro",
+    apodo:"Canis"
+}
+
+>> mi_selva.animales[1].nombre;
+
+FINIS;

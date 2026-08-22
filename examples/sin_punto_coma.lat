@@ -1,0 +1,15 @@
+// Declaracion de variable tipo estructura SIN ';' final.
+VARIABILES>
+
+structura Selva {
+    esto valido : verum;
+    series animales : Animal;
+} finis;
+
+esto mi_selva: Selva { valido: verum, animales: Animal[7] }
+
+MAIOR>
+
+>> mi_selva.valido;
+
+FINIS;

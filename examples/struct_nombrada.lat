@@ -1,0 +1,16 @@
+// Literal de estructura con nombre de atributo, en orden normal e invertido.
+VARIABILES>
+
+structura Persona {
+    esto nombre : textum;
+    esto edad : numerus;
+} finis;
+
+esto lider : Persona { nombre: "Yennifer", edad: 999 }
+esto clon : Persona { edad: 34, nombre: "Ana" }
+
+MAIOR>
+
+>> lider.nombre >> clon.edad;
+
+FINIS;

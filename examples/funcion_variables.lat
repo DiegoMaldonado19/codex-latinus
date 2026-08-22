@@ -1,0 +1,33 @@
+// Seccion VARIABILES[ ] al inicio del cuerpo de una funcion.
+VARIABILES>
+
+esto fuerza : numerus 10;
+
+MUNERA>
+
+actio atacarCerdos(esto fuerza : numerus, esto precision : decimalis) {
+    VARIABILES[
+        esto intentos : numerus 0;
+        series marcas[2] : numerus {0, 0};
+    ]
+    intentos = intentos + 1;
+    >> "Atacando con fuerza: " >> fuerza;
+} finis;
+
+ratio numerus calcularPoder(esto fuerza : numerus) {
+    VARIABILES[
+        esto total : numerus fuerza * 2;
+    ]
+    reddere total;
+} finis;
+
+actio sinSeccion() {
+    >> "La seccion VARIABILES[ ] es opcional";
+} finis;
+
+MAIOR>
+
+atacarCerdos(10, 0.5);
+>> "Tu poder es: " >> calcularPoder(fuerza);
+
+FINIS;

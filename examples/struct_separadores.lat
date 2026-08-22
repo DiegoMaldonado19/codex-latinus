@@ -1,0 +1,16 @@
+// La misma instanciacion separada con ',' y con ';'.
+VARIABILES>
+
+structura Persona {
+    esto nombre : textum;
+    esto edad : numerus;
+} finis;
+
+esto conComa : Persona { nombre: "Ana", edad: 34 }
+esto conPuntoComa : Persona { nombre: "Ana"; edad: 34 }
+
+MAIOR>
+
+>> conComa.nombre >> conPuntoComa.nombre;
+
+FINIS;

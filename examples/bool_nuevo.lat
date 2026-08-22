@@ -1,0 +1,21 @@
+// Tipo bool explicito y la forma vieja sin tipo (ambas deben parsear).
+VARIABILES>
+
+esto activo : bool verum;
+esto apagado : bool falsus;
+esto heredado : verum;
+esto tambien : falsus;
+
+series banderas[2] : bool {verum, falsus};
+
+MUNERA>
+
+ratio bool esValido(esto activo : bool) {
+    reddere activo;
+} finis;
+
+MAIOR>
+
+>> esValido(activo);
+
+FINIS;
