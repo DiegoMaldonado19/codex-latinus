@@ -1,0 +1,63 @@
+/* =====================================================================
+ *  Paleta del editor.
+ *
+ *  Quien decide que clase lleva cada palabra es HighlightingCodeArea, con
+ *  el LatinLexer real; aqui solo se dice de que color se pinta cada clase.
+ *  Los colores son los de Iteracion II (Constants.java), adaptados a CSS.
+ *
+ *  Todas las reglas van anidadas bajo .latin-editor a proposito: JavaFX ya
+ *  usa "text" como clase de estilo interna de cada Label, asi que una regla
+ *  suelta .text pinta la interfaz ENTERA del color del editor. Por lo mismo
+ *  la clase neutral se llama "plain" y no "text".
+ * ===================================================================== */
+
+.latin-editor .keyword { -fx-fill: #E58F65; -fx-font-weight: bold; }
+.latin-editor .type    { -fx-fill: #6FBF73; -fx-font-weight: bold; }
+.latin-editor .number  { -fx-fill: #B5CEA8; }
+.latin-editor .string  { -fx-fill: #CE9178; }
+.latin-editor .comment { -fx-fill: #6A9955; -fx-font-style: italic; }
+.latin-editor .plain   { -fx-fill: #E8E8E8; }
+.latin-editor .invalid { -fx-fill: #F14C4C; -fx-underline: true; }
+
+/* La paleta es para fondo oscuro, asi que el editor lleva el suyo. El resto
+   de la interfaz se queda con el tema por defecto de JavaFX. */
+.latin-editor
+{
+    -fx-background-color: #1E1E1E;
+    -fx-font-family: "Consolas", "Courier New", monospace;
+    -fx-font-size: 14px;
+}
+
+.latin-editor .caret     { -fx-stroke: #E8E8E8; }
+.latin-editor .selection { -fx-fill: #264F78; }
+
+.latin-editor .lineno
+{
+    -fx-background-color: #1E1E1E;
+    -fx-text-fill: #858585;
+    -fx-font-family: "Consolas", "Courier New", monospace;
+    -fx-font-size: 13px;
+}
+
+/* ------------------------- Resto de la interfaz ------------------------ */
+
+.panel-title
+{
+    -fx-font-weight: bold;
+    -fx-padding: 4 2 6 2;
+}
+
+.compile-button
+{
+    -fx-font-weight: bold;
+}
+
+.process-stack,
+.translation-area
+{
+    -fx-font-family: "Consolas", "Courier New", monospace;
+    -fx-font-size: 13px;
+}
+
+.status-ok    { -fx-text-fill: #2E7D32; -fx-font-weight: bold; }
+.status-error { -fx-text-fill: #C62828; -fx-font-weight: bold; }
