@@ -1,0 +1,15 @@
+// Espera: textum solo admite '+', y bool no participa en aritmetica.
+VARIABILES>
+
+esto edad : numerus 20;
+esto nombre : textum "Ana";
+esto activo : bool verum;
+
+MAIOR>
+
+>> nombre - edad;
+>> nombre * 2;
+>> activo + edad;
+>> non edad;
+
+FINIS;

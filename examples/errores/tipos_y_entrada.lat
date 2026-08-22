@@ -1,0 +1,25 @@
+// Espera: atributo de tipo inexistente, lectura de una structura completa,
+// incremento sobre textum y arreglo sin tipo ni valores de los cuales
+// deducirlo.
+VARIABILES>
+
+esto nombre : textum "Ana";
+
+structura Caja {
+    esto contenido : Fantasma;
+} finis;
+
+structura Persona {
+    esto nombre : textum;
+} finis;
+
+esto quien : Persona { nombre: "Ana" }
+
+series vacio[2] : ;
+
+MAIOR>
+
+quien <<
+nombre++;
+
+FINIS;

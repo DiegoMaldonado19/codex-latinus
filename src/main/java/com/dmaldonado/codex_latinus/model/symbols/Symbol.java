@@ -1,0 +1,74 @@
+package com.dmaldonado.codex_latinus.model.symbols;
+
+import com.dmaldonado.codex_latinus.model.types.DataType;
+
+/**
+ * Base entry of the symbol table.
+ *
+ * typeText is kept next to type because they are not the same thing: a variable
+ * of type ESTRUCTURA needs to remember it was written "Persona", and error
+ * messages have to echo back what the user typed.
+ */
+public abstract class Symbol
+{
+    private final String         name;
+    private final DataType       type;
+    private final String         typeText;
+    private final SymbolCategory category;
+    private final String         scopeName;
+    private final int            line;
+    private final int            column;
+
+    protected Symbol(String name, DataType type, String typeText, SymbolCategory category,
+                     String scopeName, int line, int column)
+    {
+        this.name      = name;
+        this.type      = type;
+        this.typeText  = typeText;
+        this.category  = category;
+        this.scopeName = scopeName;
+        this.line      = line;
+        this.column    = column;
+    }
+
+    public String getName()
+    {
+        return name;
+    }
+
+    public DataType getType()
+    {
+        return type;
+    }
+
+    public String getTypeText()
+    {
+        return typeText;
+    }
+
+    public SymbolCategory getCategory()
+    {
+        return category;
+    }
+
+    public String getScopeName()
+    {
+        return scopeName;
+    }
+
+    public int getLine()
+    {
+        return line;
+    }
+
+    public int getColumn()
+    {
+        return column;
+    }
+
+    /** Extra information shown in the "Detalle" column of the symbol table. */
+    public String getDetail()
+    {
+        return "";
+    }
+}

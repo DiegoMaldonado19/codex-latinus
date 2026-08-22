@@ -62,7 +62,7 @@ public class ArrayDeclaration extends AstNode
     @Override
     public String getLabel()
     {
-        return "series " + name + " : " + typeText;
+        return "series " + name + " : " + (typeText == null ? "?" : typeText);
     }
 
     @Override

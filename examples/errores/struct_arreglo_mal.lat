@@ -1,0 +1,21 @@
+// Espera (G3): un atributo declarado 'series' dentro de una structura se
+// instancia con su tamano, "animales: Animal[7]". Telegram 7/08 18:42.
+VARIABILES>
+
+structura Animal {
+    esto nombre : textum;
+} finis;
+
+structura Selva {
+    esto valido : bool;
+    series animales : Animal;
+} finis;
+
+esto mala : Selva { valido: verum, animales: 7 }
+esto mala2 : Selva { valido: verum, animales: Persona[3] }
+
+MAIOR>
+
+>> mala.valido;
+
+FINIS;

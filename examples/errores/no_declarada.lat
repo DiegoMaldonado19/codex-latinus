@@ -1,0 +1,26 @@
+// Espera: variable no declarada, funcion no declarada, tipo inexistente, y
+// usar el nombre de una funcion o de una structura como si fuera un valor.
+VARIABILES>
+
+esto edad : numerus 20;
+
+structura Persona {
+    esto nombre : textum;
+} finis;
+
+MUNERA>
+
+ratio numerus doble(esto n : numerus) {
+    reddere n * 2;
+} finis;
+
+MAIOR>
+
+>> desconocida;
+poder = 5;
+calcularAlgo(1);
+esto fantasma : Fantasma { x: 1 }
+>> doble;
+>> Persona;
+
+FINIS;

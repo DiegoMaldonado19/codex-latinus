@@ -1,0 +1,27 @@
+// Espera (G7): las declaraciones van al inicio de la funcion, en
+// VARIABILES[ ]. Telegram 6/08 20:04: "Dentro de un if por ejemplo, no se
+// deberan declarar, es solo al inicio de la funcion".
+VARIABILES>
+
+esto edad : numerus 20;
+
+MUNERA>
+
+actio prueba() {
+    VARIABILES[
+        esto valido : bool verum;
+    ]
+    si (valido) {
+        esto interna : numerus 1;
+        series arreglo[2] : numerus {1, 2};
+    } finis;
+} finis;
+
+MAIOR>
+
+dum (edad > 0) {
+    esto otra : textum "x";
+    edad = edad - 1;
+} finis;
+
+FINIS;

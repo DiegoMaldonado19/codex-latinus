@@ -1,6 +1,11 @@
 // Declaracion de variable tipo estructura SIN ';' final.
 VARIABILES>
 
+structura Animal {
+    esto nombre : textum;
+    esto apodo : textum;
+} finis;
+
 structura Selva {
     esto valido : verum;
     series animales : Animal;

@@ -1,0 +1,21 @@
+// Espera: interrumpe y perge solo dentro de ciclos, y reddere solo dentro
+// de una funcion.
+VARIABILES>
+
+esto edad : numerus 20;
+
+MUNERA>
+
+actio prueba() {
+    interrumpe;
+} finis;
+
+MAIOR>
+
+perge;
+si (edad > 10) {
+    interrumpe;
+} finis;
+reddere 1;
+
+FINIS;

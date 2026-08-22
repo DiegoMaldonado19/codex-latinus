@@ -1,0 +1,22 @@
+// Espera: la condicion de si/dum/per debe ser estrictamente booleana.
+// Enunciado: "Cualquier intento de evaluar un valor numerico como una
+// condicion logica sera marcado como 'Corrupcion de Flujo'".
+VARIABILES>
+
+esto edad : numerus 20;
+
+MAIOR>
+
+si (edad) {
+    >> "mayor";
+} finis;
+
+dum (edad) {
+    edad = edad - 1;
+} finis;
+
+per (esto i : numerus 0; i; i++) {
+    >> i;
+} finis;
+
+FINIS;

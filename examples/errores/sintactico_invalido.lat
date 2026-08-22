@@ -1,0 +1,13 @@
+// Espera: error SINTACTICO (falta cerrar el parentesis del si).
+// No se construye AST.
+VARIABILES>
+
+esto edad : numerus 20;
+
+MAIOR>
+
+si (edad > 1 {
+    >> "hola";
+} finis;
+
+FINIS;

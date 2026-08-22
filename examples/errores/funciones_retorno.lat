@@ -1,0 +1,26 @@
+// Espera: 'actio' no puede retornar un valor, 'ratio' debe retornar uno,
+// tipo de retorno inexistente y tipo de parametro inexistente.
+
+MUNERA>
+
+actio saludar() {
+    reddere 5;
+} finis;
+
+ratio numerus sinValor() {
+    reddere;
+} finis;
+
+ratio Fantasma inventada() {
+    reddere 1;
+} finis;
+
+actio recibe(esto p : Espectro) {
+    >> "hola";
+} finis;
+
+MAIOR>
+
+saludar();
+
+FINIS;

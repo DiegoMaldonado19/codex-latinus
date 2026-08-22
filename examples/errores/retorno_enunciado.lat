@@ -1,0 +1,22 @@
+// El bloque de errores que trae el propio enunciado (seccion "Funciones").
+// Espera:
+//   1. el retorno tiene que ser de tipo numerus  (se retorna decimalis)
+//   2. codigo no rastreable, ya se devolvio un valor
+//   3. la funcion no siempre retorna un valor
+// Mas un cuarto error real que el enunciado no anota: declarar dentro de
+// un 'si' (Telegram 6/08 20:04).
+
+MUNERA>
+
+ratio numerus calcularPoder() {
+    si ( 1 < 3 ) {
+        reddere 3.4;
+        esto mi_booleano : verum;
+    } finis;
+} finis;
+
+MAIOR>
+
+>> calcularPoder();
+
+FINIS;

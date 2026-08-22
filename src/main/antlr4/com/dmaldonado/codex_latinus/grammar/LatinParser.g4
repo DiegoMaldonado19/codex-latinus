@@ -65,8 +65,13 @@ declaracionVariable
     ;
 
 // series mis_enteros[2] : numerus {1, 1};
+//
+// El tipo es opcional por la forma vieja del arreglo booleano que dio el
+// auxiliar antes de que existiera 'bool' (Telegram 6/08 22:08):
+//     series valores[2] : {verum, verum};
+// Cuando falta, el AstBuilderVisitor infiere el tipo del primer valor.
 declaracionArreglo
-    : SERIES ID COR_IZQ expresion COR_DER DOS_PUNTOS tipo
+    : SERIES ID COR_IZQ expresion COR_DER DOS_PUNTOS tipo?
       ( LLAVE_IZQ listaExpresiones? LLAVE_DER )?
       PUNTO_COMA
     ;

@@ -1,0 +1,22 @@
+// Espera: atributo faltante, atributo inexistente, tipos incorrectos y
+// literal posicional donde se exige nombre de atributo, y variable de tipo
+// structura sin inicializar.
+VARIABILES>
+
+structura Persona {
+    esto nombre : textum;
+    esto edad : numerus;
+} finis;
+
+esto falta : Persona { nombre: "Ana" }
+esto sobra : Persona { nombre: "Ana", edad: 30, altura: 1 }
+esto malTipo : Persona { nombre: 5, edad: "treinta" }
+esto posicional : Persona { "Ana", 30 }
+esto sinValores : Persona;
+
+MAIOR>
+
+>> falta.nombre;
+>> falta.apellido;
+
+FINIS;

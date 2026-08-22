@@ -1,0 +1,18 @@
+// Espera: aridad de mas, de menos, y tipo de argumento incorrecto.
+VARIABILES>
+
+esto nombre : textum "Ana";
+
+MUNERA>
+
+ratio numerus sumar(esto a : numerus, esto b : numerus) {
+    reddere a + b;
+} finis;
+
+MAIOR>
+
+>> sumar(1);
+>> sumar(1, 2, 3);
+>> sumar(nombre, 2);
+
+FINIS;

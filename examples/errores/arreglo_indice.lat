@@ -1,0 +1,19 @@
+// Espera: tamano no numerus, cantidad de valores distinta al tamano,
+// tamano negativo, indice fuera de rango, indice negativo, indice no
+// numerus, y uso de [] sobre algo que no es un arreglo.
+VARIABILES>
+
+esto nombre : textum "Ana";
+series numeros[2] : numerus {1, 1};
+series malTamano[nombre] : numerus;
+series desbalanceado[3] : numerus {1, 2};
+series negativo[-2] : numerus;
+
+MAIOR>
+
+>> numeros[5];
+>> numeros[nombre];
+>> numeros[-1];
+>> nombre[0];
+
+FINIS;

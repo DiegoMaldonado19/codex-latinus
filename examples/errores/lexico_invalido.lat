@@ -1,0 +1,11 @@
+// Espera: error LEXICO. El pipeline se detiene sin intentar parsear.
+VARIABILES>
+
+esto edad : numerus 20;
+esto # : numerus 1;
+
+MAIOR>
+
+>> edad;
+
+FINIS;

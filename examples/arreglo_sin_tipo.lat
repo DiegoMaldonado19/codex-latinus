@@ -1,0 +1,15 @@
+// Forma vieja del arreglo booleano, sin tipo explicito.
+// Telegram 6/08 22:08 (iGriega): "series valores[2] : {verum, verum};"
+// El tipo del elemento se deduce del primer valor del literal.
+
+VARIABILES>
+
+series valores[2] : {verum, falsus};
+series enteros[2] : {1, 2};
+
+MAIOR>
+
+>> valores[0];
+>> enteros[1];
+
+FINIS;

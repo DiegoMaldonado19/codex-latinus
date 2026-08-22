@@ -1,0 +1,27 @@
+// Espera: variable repetida, atributo repetido, parametro repetido,
+// funcion repetida.
+VARIABILES>
+
+esto edad : numerus 20;
+esto edad : numerus 30;
+
+structura Persona {
+    esto nombre : textum;
+    esto nombre : numerus;
+} finis;
+
+MUNERA>
+
+actio saludar(esto a : numerus, esto a : numerus) {
+    >> a;
+} finis;
+
+actio saludar(esto b : numerus) {
+    >> b;
+} finis;
+
+MAIOR>
+
+>> edad;
+
+FINIS;

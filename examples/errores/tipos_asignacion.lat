@@ -1,0 +1,26 @@
+// Espera: textum a numerus, decimalis a numerus, y Carro a Persona (G5:
+// dos structuras distintas no son asignables entre si).
+VARIABILES>
+
+esto edad : numerus 20;
+esto nombre : textum "Ana";
+esto gravedad : decimalis 9.81;
+
+structura Persona {
+    esto nombre : textum;
+} finis;
+
+structura Carro {
+    esto nombre : textum;
+} finis;
+
+esto p : Persona { nombre: "Ana" }
+esto c : Carro { nombre: "Rojo" }
+
+MAIOR>
+
+edad = nombre;
+edad = gravedad;
+p = c;
+
+FINIS;

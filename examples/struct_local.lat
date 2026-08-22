@@ -1,0 +1,32 @@
+// Structura declarada DENTRO de VARIABILES[ ] y funcion que retorna una
+// structura. Telegram 6/08 20:04 (iGriega): "si es posible usarlas dentro de
+// las variables y tambien es posible retornarlas en una funcion. La unica
+// restriccion es que esten dentro del bloque de VARIABILES".
+
+VARIABILES>
+
+structura Persona {
+    esto nombre : textum;
+    esto nombreCarro : textum;
+} finis;
+
+MUNERA>
+
+ratio Persona calcularPersona() {
+    VARIABILES[
+        structura Carro {
+            esto nombre : textum;
+        } finis;
+        esto miCarro : Carro { nombre: "Carro X" }
+        esto yo : Persona { nombre: "Estudiante", nombreCarro: miCarro.nombre }
+    ]
+    reddere yo;
+} finis;
+
+MAIOR>
+
+esto persona : Persona { nombre: "Ana", nombreCarro: "ninguno" }
+persona = calcularPersona();
+>> persona.nombre;
+
+FINIS;

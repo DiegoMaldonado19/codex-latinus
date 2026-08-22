@@ -152,9 +152,29 @@ public class AstBuilderVisitor extends LatinParserBaseVisitor<AstNode>
     @Override
     public AstNode visitDeclaracionArreglo(LatinParser.DeclaracionArregloContext ctx)
     {
+        List<Expression> values = expressionList(ctx.listaExpresiones());
+
         return new ArrayDeclaration(ctx.ID().getText(), expression(ctx.expresion()),
-                ctx.tipo().getText(), expressionList(ctx.listaExpresiones()),
-                line(ctx), column(ctx));
+                arrayTypeText(ctx, values), values, line(ctx), column(ctx));
+    }
+
+    /**
+     * "series valores[2] : {verum, verum};" omits the type: it is the form the
+     * assistant gave before 'bool' existed (Telegram 6/08 22:08). The element
+     * type is then inferred from the first literal value. With no type and no
+     * values there is nothing to infer, and the semantic analyzer reports it.
+     */
+    private String arrayTypeText(LatinParser.DeclaracionArregloContext ctx, List<Expression> values)
+    {
+        if (ctx.tipo() != null)
+        {
+            return ctx.tipo().getText();
+        }
+        if (!values.isEmpty() && values.get(0) instanceof LiteralExpression literal)
+        {
+            return literal.getType().getLatinName();
+        }
+        return null;
     }
 
     @Override
