@@ -9,11 +9,14 @@ import com.dmaldonado.codex_latinus.model.errors.CompilerError;
 import com.dmaldonado.codex_latinus.model.errors.ErrorManager;
 import com.dmaldonado.codex_latinus.model.errors.ErrorType;
 import com.dmaldonado.codex_latinus.model.errors.SyntaxErrorListener;
+import com.dmaldonado.codex_latinus.model.stack.ProcessStackListener;
+import com.dmaldonado.codex_latinus.model.stack.ProcessStep;
 import com.dmaldonado.codex_latinus.model.symbols.SymbolTable;
 import java.util.List;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.Token;
+import org.antlr.v4.runtime.tree.ParseTreeWalker;
 
 /**
  * Runs the whole pipeline and enforces where it has to stop.
@@ -27,6 +30,7 @@ import org.antlr.v4.runtime.Token;
  *   lexer  -> scan for CARACTER_INVALIDO
  *   parser -> SyntaxErrorListener
  *      lexical or syntax errors ? -> stop, no AST is built
+ *   ProcessStackListener -> the simulated stack, recorded even on a bad file
  *   AstBuilderVisitor -> Program
  *   SemanticAnalyzer  -> SymbolTable
  *      semantic errors ? -> stop, nothing is graphed or translated
@@ -39,8 +43,10 @@ public class LatinCompiler
     /**
      * @param ast          null when the source did not get past the parser.
      * @param symbolTable  empty when the AST was never built.
+     * @param steps        empty only when the file was never parsed at all.
      */
-    public record CompilationResult(Program ast, SymbolTable symbolTable, List<CompilerError> errors)
+    public record CompilationResult(Program ast, SymbolTable symbolTable,
+                                    List<ProcessStep> steps, List<CompilerError> errors)
     {
         /** Only a valid program may be graphed and translated. */
         public boolean isValid()
@@ -65,7 +71,7 @@ public class LatinCompiler
         // error the parser would report after one is noise derived from it.
         if (errorManager.hasErrorsOf(ErrorType.LEXICAL))
         {
-            return new CompilationResult(null, symbolTable, errorManager.getErrors());
+            return new CompilationResult(null, symbolTable, List.of(), errorManager.getErrors());
         }
 
         LatinParser parser = new LatinParser(tokens);
@@ -74,9 +80,15 @@ public class LatinCompiler
 
         LatinParser.ProgramaContext parseTree = parser.programa();
 
+        // Recorded before the syntax cut on purpose: a file that does not parse
+        // is exactly the one whose ERROR steps the user needs to see.
+        ProcessStackListener stackListener = new ProcessStackListener(parser);
+        ParseTreeWalker.DEFAULT.walk(stackListener, parseTree);
+        List<ProcessStep> steps = stackListener.getSteps();
+
         if (errorManager.hasErrorsOf(ErrorType.SYNTACTIC))
         {
-            return new CompilationResult(null, symbolTable, errorManager.getErrors());
+            return new CompilationResult(null, symbolTable, steps, errorManager.getErrors());
         }
 
         Program ast = new AstBuilderVisitor().build(parseTree);
@@ -85,7 +97,7 @@ public class LatinCompiler
         {
             new SemanticAnalyzer(errorManager, symbolTable).visitProgram(ast);
         }
-        return new CompilationResult(ast, symbolTable, errorManager.getErrors());
+        return new CompilationResult(ast, symbolTable, steps, errorManager.getErrors());
     }
 
     /**
