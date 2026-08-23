@@ -1,29 +1,21 @@
 package com.dmaldonado.codex_latinus.model.translation;
 
 /**
- * The word conversion laws of the statement. Pure algorithm: no state, no
- * ANTLR, no AST, so it can be tested on its own.
+ * Las leyes de conversion del enunciado. Algoritmo puro: sin estado, sin ANTLR
+ * y sin AST, asi que se puede probar por si solo.
  *
- *   LEY DE CONSONANTES: the leading consonant group moves to the end and "ay"
- *   is appended.        fuerza -> uerza + f + ay -> uerzafay
- *                       tabla  -> abla  + t + ay -> ablatay
+ *   CONSONANTES: fuerza -> uerzafay      VOCALES: inicio -> inicioway
+ *   PORCINA:     &lt;&lt; -> %OINK_OINK   &gt;&gt; -> %OINK
  *
- *   LEY DE VOCALES: a word starting with a vowel just gets "way".
- *                       inicio  -> inicioway
- *                       archivo -> archivoway
- *
- *   LEY PORCINA:  <<  ->  %OINK_OINK        >>  ->  %OINK
- *
- * Identifiers are converted segment by segment so underscores and digits
- * survive:  mi_variable2 -> imay_ariablevay2
+ * Se convierte segmento a segmento para que sobrevivan '_' y digitos:
+ * mi_variable2 -> imay_ariablevay2
  */
 public final class PigLatinWordConverter
 {
     public static final String INPUT_OINK  = "%OINK_OINK";
     public static final String OUTPUT_OINK = "%OINK";
 
-    /** Written with escapes because the rest of the project keeps its sources
-     *  in ASCII, and the lexer does accept accented letters in identifiers. */
+    /** Con escapes: las fuentes van en ASCII y el lexer si acepta acentos. */
     private static final String VOWELS = "aeiou\u00e1\u00e9\u00ed\u00f3\u00fa\u00fc";
 
     private PigLatinWordConverter()
@@ -59,11 +51,9 @@ public final class PigLatinWordConverter
     }
 
     /**
-     * Applies the laws to a segment made only of letters, keeping the casing
-     * style of the original identifier:
-     *   calcularPoder -> alcularPodercay   (camelCase intact)
-     *   Persona       -> Ersonapay         (PascalCase intact)
-     *   VARIABILES    -> ARIABILESVAY      (section markers stay uppercase)
+     * Aplica las leyes a un segmento de solo letras conservando el estilo:
+     * calcularPoder -> alcularPodercay, Persona -> Ersonapay,
+     * VARIABILES -> ARIABILESVAY.
      */
     private static String convertSegment(String segment)
     {
@@ -119,7 +109,7 @@ public final class PigLatinWordConverter
                 : Character.toUpperCase(word.charAt(0)) + word.substring(1);
     }
 
-    /** Converts the content of a textum word by word, keeping the quotes. */
+    /** Convierte el contenido de un textum palabra por palabra, con sus comillas. */
     public static String convertText(String quotedLiteral)
     {
         if (quotedLiteral.length() < 2)

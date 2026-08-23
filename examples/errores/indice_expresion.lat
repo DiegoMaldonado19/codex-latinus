@@ -1,0 +1,17 @@
+// Espera: el enunciado exige validar el rango cuando el indice "se puede
+// evaluar al hacer la verificacion de semantica". Todos son constantes.
+VARIABILES>
+
+series numeros[2] : numerus {1, 1};
+series calculado[2 + 3] : numerus;
+
+MAIOR>
+
+>> numeros[1 + 1];        // 2, fuera de rango (posiciones 0 y 1)
+>> numeros[4 - 4];        // 0, valido
+>> numeros[3 * 2];        // 6, fuera de rango
+>> calculado[4];          // valido: el tamano plegado es 5
+>> calculado[5];          // fuera de rango
+>> numeros[10 / 0];       // no se puede evaluar: no se reporta rango
+
+FINIS;

@@ -3,19 +3,12 @@ package com.dmaldonado.codex_latinus.model.ast;
 import com.dmaldonado.codex_latinus.model.types.DataType;
 
 /**
- * Node that produces a value.
+ * Nodo que produce un valor: separa lo que puede ir a la derecha de una
+ * asignacion de lo que no.
  *
- * Marker base class: it separates what can appear on the right hand side of an
- * assignment from what cannot.
- *
- * The two mutable fields are filled in by the semantic analyzer, never by the
- * AST builder:
- *   - computedType: the inferred type, so later phases do not redo the work and
- *     the AST graph can show it.
- *   - structName: which structura this expression refers to when its type is
- *     ESTRUCTURA. It is the only channel that makes a chain like
- *     mi_selva.animales[1].nombre resolvable, because DataType.ESTRUCTURA alone
- *     does not say WHICH structure.
+ * Los dos campos mutables los llena el analizador semantico, nunca el
+ * constructor del AST: computedType es el tipo inferido, y structName dice
+ * CUAL structura, que DataType.ESTRUCTURA por si solo no distingue.
  */
 public abstract class Expression extends AstNode
 {

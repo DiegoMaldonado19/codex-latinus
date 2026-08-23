@@ -6,19 +6,12 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Symbol table with nested scopes.
+ * Tabla de simbolos con ambitos anidados. Guarda TRES vistas de los mismos
+ * datos, para tres consumidores:
  *
- * It keeps TWO views of the same data, for two different consumers:
- *
- *  - the live scope chain (currentScope), used by the semantic analyzer while it
- *    walks the AST: closing a scope must hide its locals;
- *  - a flat history (allSymbols), used to graph the table once compilation is
- *    over: at that point every scope is closed, yet the graph must still show
- *    the locals of every function.
- *
- * The structs/functions maps are a third, narrow view: they resolve a structura
- * or a function signature by name without walking the scope chain, and they are
- * what makes forward calls possible.
+ *  - currentScope: la cadena viva, para el analizador (cerrar oculta locales);
+ *  - allSymbols:   historial plano, para graficar cuando ya todo esta cerrado;
+ *  - structs/functions: resolucion por nombre, lo que permite el uso adelantado.
  */
 public class SymbolTable
 {

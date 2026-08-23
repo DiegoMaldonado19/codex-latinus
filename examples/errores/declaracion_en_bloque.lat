@@ -15,6 +15,8 @@ actio prueba() {
         esto interna : numerus 1;
         series arreglo[2] : numerus {1, 2};
     } finis;
+
+    esto tardia : numerus 1;   // ya fuera de VARIABILES[ ]: tambien es error
 } finis;
 
 MAIOR>

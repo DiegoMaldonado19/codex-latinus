@@ -3,15 +3,13 @@ lexer grammar LatinLexer;
 /* =====================================================================
  *  LEXER DEL LENGUAJE LATIN  (.lat)
  *
- *  El orden de las reglas es la prioridad ante empates de longitud:
- *  literales largos ANTES que los cortos, y palabras reservadas ANTES
- *  que ID (si no, 'si' se leeria como un identificador de dos letras).
+ *  El ORDEN de las reglas es la prioridad ante empates de longitud:
+ *  literales largos antes que cortos, y palabras reservadas antes que ID.
+ *
+ *  Especificacion completa: docs/02-Especificacion-del-Lenguaje.md
  * ===================================================================== */
 
-/* ---------- 1. Marcadores de seccion --------------------------------
- * Van primero porque VARIABILES> y VARIABILES[ empiezan igual que un
- * identificador, y FINIS en mayusculas cierra el programa entero.
- * -------------------------------------------------------------------- */
+/* ---------- 1. Marcadores de seccion --------------------------------- */
 VARIABILES       : 'VARIABILES>' ;
 VARIABILES_LOCAL : 'VARIABILES[' ;   // seccion de variables dentro de una funcion
 MUNERA           : 'MUNERA>' ;
@@ -94,19 +92,22 @@ CARACTER  : '\'' ( ESCAPE | ~['\\\r\n] ) '\'' ;
 ID : ( LETRA | '_' ) ( LETRA | DIGITO | '_' )* ;
 
 /* ---------- 8. Ignorados por el parser -------------------------------
- * channel(HIDDEN) en vez de skip: el parser los ignora igual, pero
- * siguen disponibles via lexer.getAllTokens() para que el coloreado de
- * sintaxis pueda pintar los comentarios sin dejar huecos en el texto.
+ * channel(HIDDEN) y no skip: el parser los ignora igual, pero siguen
+ * disponibles para que el coloreado pinte los comentarios.
  * -------------------------------------------------------------------- */
 COMENTARIO_LINEA  : '//' ~[\r\n]* -> channel(HIDDEN) ;
 COMENTARIO_BLOQUE : '/*' .*? '*/' -> channel(HIDDEN) ;
 ESPACIOS          : [ \t\r\n\f]+  -> channel(HIDDEN) ;
 
 /* ---------- 9. Recuperacion lexica -----------------------------------
- * Cualquier caracter que no encaje cae aqui para reportarlo como error
- * lexico con linea y columna, en vez de que ANTLR lo descarte callado.
+ * Las tres primeras van DESPUES de su version bien formada: ANTLR toma la
+ * coincidencia mas larga y la cerrada siempre lo es, asi que "abc" sigue
+ * siendo TEXTO. CARACTER_INVALIDO cierra como cajon de sastre.
  * -------------------------------------------------------------------- */
-CARACTER_INVALIDO : . ;
+TEXTO_SIN_CERRAR      : '"'  ( ESCAPE | ~["\\\r\n] )* ;
+CARACTER_SIN_CERRAR   : '\'' ( ESCAPE | ~['\\\r\n] )? ;
+COMENTARIO_SIN_CERRAR : '/*' ( ~'*' | '*' ~'/' )* '*'? ;
+CARACTER_INVALIDO     : . ;
 
 /* ---------- Fragmentos ---------------------------------------------- */
 fragment LETRA  : [a-zA-ZáéíóúÁÉÍÓÚñÑ] ;

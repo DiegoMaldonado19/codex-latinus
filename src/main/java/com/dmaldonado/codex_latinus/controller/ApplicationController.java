@@ -13,16 +13,11 @@ import javafx.stage.Stage;
 import org.fxmisc.richtext.CodeArea;
 
 /**
- * THE BRIDGE (MVC).
+ * EL PUENTE (MVC). Unico punto donde la vista y el modelo se encuentran: la
+ * vista no sabe de ANTLR y LatinCompiler no sabe de JavaFX.
  *
- * The only place where the view and the model meet. The view knows nothing
- * about ANTLR and LatinCompiler knows nothing about JavaFX; this class wires
- * one to the other and is the single place where the buttons are given a
- * meaning.
- *
- * There is no CompilerController wrapping LatinCompiler: the model already runs
- * the whole pipeline and already returns a UI agnostic CompilationResult, so a
- * wrapper would only duplicate that record.
+ * No hay un CompilerController envolviendo a LatinCompiler: el modelo ya corre
+ * el pipeline y ya devuelve un CompilationResult agnostico de la interfaz.
  */
 public class ApplicationController
 {
@@ -52,8 +47,7 @@ public class ApplicationController
         view.getSaveButton().setOnAction(event -> save());
         view.getExportButton().setOnAction(event -> exportTranslation());
 
-        // Double click on an error moves the caret to it: three lines that pay
-        // for themselves the first time a file has more than one error.
+        // Doble clic en un error lleva el cursor hasta el.
         view.getErrorTable().setRowFactory(table ->
         {
             TableRow<CompilerError> row = new TableRow<>();
@@ -68,7 +62,6 @@ public class ApplicationController
             return row;
         });
 
-        view.getTranslateKeywordsBox().setOnAction(event -> refreshTranslation());
         view.getTranslateStringsBox().setOnAction(event -> refreshTranslation());
     }
 
@@ -83,24 +76,21 @@ public class ApplicationController
         view.showErrors(lastResult.errors());
         view.showSymbols(lastResult.symbolTable().getAllSymbols());
 
-        // The statement forbids graphing and translating a program with errors,
-        // so both panels are cleared instead of keeping a stale result on screen.
+        // El enunciado prohibe graficar y traducir un programa con errores: se
+        // limpian ambos paneles en vez de dejar un resultado viejo en pantalla.
         view.showAst(lastResult.isValid() ? AstTreeBuilder.build(lastResult.ast()) : null);
         view.showTranslation(lastResult.isValid() ? translate() : "");
         view.getExportButton().setDisable(!lastResult.isValid());
 
-        // The stack is shown whether the file compiled or not: an invalid file is
-        // exactly the one whose ERROR steps the user needs to read.
+        // La pila se muestra compile o no: el archivo invalido es justo aquel
+        // cuyos pasos ERROR hay que leer.
         view.getProcessStackPanel().load(lastResult.steps());
 
         view.setStatus(summaryOf(lastResult), lastResult.isValid());
         view.showResultTab(lastResult.isValid());
     }
 
-    /**
-     * The checkboxes do not recompile anything: the AST of the last successful
-     * compilation is still in memory, and translating it again is the whole job.
-     */
+    /** La casilla no recompila: retraduce el AST que ya esta en memoria. */
     private void refreshTranslation()
     {
         if (lastResult != null && lastResult.isValid())
@@ -111,7 +101,6 @@ public class ApplicationController
 
     private String translate()
     {
-        translator.setTranslateKeywords(view.getTranslateKeywordsBox().isSelected());
         translator.setTranslateStrings(view.getTranslateStringsBox().isSelected());
         return translator.translate(lastResult.ast());
     }
@@ -137,9 +126,8 @@ public class ApplicationController
             return;
         }
 
-        // The error is 1 based and the editor 0 based, and the position has to be
-        // clamped: an error reported at the end of the file can carry a column
-        // past the end of its line, and moveTo would throw on it.
+        // El error es 1-based y el editor 0-based, y hay que acotar: un error al
+        // final del archivo puede traer una columna mayor al largo de su linea.
         int paragraph = Math.max(0, Math.min(error.getLine() - 1, codeArea.getParagraphs().size() - 1));
         int column    = Math.max(0, Math.min(error.getColumn() - 1, codeArea.getParagraphLength(paragraph)));
 

@@ -19,24 +19,12 @@ import org.antlr.v4.runtime.Token;
 import org.antlr.v4.runtime.tree.ParseTreeWalker;
 
 /**
- * Runs the whole pipeline and enforces where it has to stop.
+ * Corre el pipeline completo y decide donde cortar, que el enunciado exige tanto
+ * como cada validacion: nada se grafica ni se traduce si hay errores.
  *
- * The statement is explicit about the cut points: "Graficar el AST generado,
- * solo si el lenguaje es valido" and "Verificar la consistencia semantica del
- * codigo reportando cualquier anomalia antes de cualquier proceso de
- * transformacion". Stopping at the right step matters as much as each
- * individual check being correct.
+ * No sabe nada de la interfaz: no imprime, devuelve un CompilationResult.
  *
- *   lexer  -> scan for CARACTER_INVALIDO
- *   parser -> SyntaxErrorListener
- *      lexical or syntax errors ? -> stop, no AST is built
- *   ProcessStackListener -> the simulated stack, recorded even on a bad file
- *   AstBuilderVisitor -> Program
- *   SemanticAnalyzer  -> SymbolTable
- *      semantic errors ? -> stop, nothing is graphed or translated
- *
- * Knows nothing about the interface: it prints nothing and returns a result the
- * controller of module 10 paints.
+ * Diagrama del pipeline: docs/05-Manual-Tecnico.md
  */
 public class LatinCompiler
 {
@@ -65,10 +53,10 @@ public class LatinCompiler
 
         CommonTokenStream tokens = new CommonTokenStream(lexer);
         tokens.fill();
-        reportInvalidCharacters(tokens, errorManager);
+        reportLexicalErrors(tokens, errorManager);
 
-        // A file with invalid characters is not parsed at all: every syntax
-        // error the parser would report after one is noise derived from it.
+        // Con errores lexicos no se parsea: todo error de sintaxis posterior
+        // seria ruido derivado de este.
         if (errorManager.hasErrorsOf(ErrorType.LEXICAL))
         {
             return new CompilationResult(null, symbolTable, List.of(), errorManager.getErrors());
@@ -80,8 +68,8 @@ public class LatinCompiler
 
         LatinParser.ProgramaContext parseTree = parser.programa();
 
-        // Recorded before the syntax cut on purpose: a file that does not parse
-        // is exactly the one whose ERROR steps the user needs to see.
+        // Antes del corte por sintaxis a proposito: el archivo que no parsea es
+        // justo aquel cuyos pasos ERROR el usuario necesita ver.
         ProcessStackListener stackListener = new ProcessStackListener(parser);
         ParseTreeWalker.DEFAULT.walk(stackListener, parseTree);
         List<ProcessStep> steps = stackListener.getSteps();
@@ -101,20 +89,32 @@ public class LatinCompiler
     }
 
     /**
-     * There is no LexicalErrorListener, and that is deliberate: the last rule of
-     * the lexer is "CARACTER_INVALIDO : . ;", a catch-all, so the lexer can
-     * never fail to match and a BaseErrorListener on it would never fire. Any
-     * character the language does not know lands on that token instead, and
-     * this is where it is turned into a lexical error with its exact position.
+     * No hay LexicalErrorListener a proposito: las reglas de error del lexer
+     * cubren todo lo que no encaja, la ultima de ellas con "CARACTER_INVALIDO
+     * : . ;", asi que el lexer nunca falla y un BaseErrorListener sobre el
+     * jamas dispararia. El mensaje sale del tipo de token, no del texto.
      */
-    private void reportInvalidCharacters(CommonTokenStream tokens, ErrorManager errorManager)
+    private void reportLexicalErrors(CommonTokenStream tokens, ErrorManager errorManager)
     {
         for (Token token : tokens.getTokens())
         {
-            if (token.getType() == LatinLexer.CARACTER_INVALIDO)
+            String description = switch (token.getType())
             {
-                errorManager.addLexical("Simbolo no reconocido por el lenguaje.",
-                        token.getText(), token.getLine(), token.getCharPositionInLine() + 1);
+                case LatinLexer.TEXTO_SIN_CERRAR ->
+                        "Cadena sin cerrar: falta la comilla doble final.";
+                case LatinLexer.CARACTER_SIN_CERRAR ->
+                        "Caracter sin cerrar: falta la comilla simple final.";
+                case LatinLexer.COMENTARIO_SIN_CERRAR ->
+                        "Comentario de bloque sin cerrar: falta '*/'.";
+                case LatinLexer.CARACTER_INVALIDO ->
+                        "Simbolo no reconocido por el lenguaje.";
+                default -> null;
+            };
+
+            if (description != null)
+            {
+                errorManager.addLexical(description, token.getText(),
+                        token.getLine(), token.getCharPositionInLine() + 1);
             }
         }
     }

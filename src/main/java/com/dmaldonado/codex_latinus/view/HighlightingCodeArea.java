@@ -4,6 +4,8 @@ import com.dmaldonado.codex_latinus.grammar.LatinLexer;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Set;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.Token;
 import org.fxmisc.richtext.CodeArea;
@@ -12,17 +14,17 @@ import org.fxmisc.richtext.model.StyleSpans;
 import org.fxmisc.richtext.model.StyleSpansBuilder;
 
 /**
- * The editor colours the code with the REAL LatinLexer.
+ * El editor colorea con el LatinLexer REAL. El catedratico exigio que el color
+ * saliera del analisis lexico propio y no de un plugin (Telegram 12/08):
+ * RichTextFX solo pinta los spans.
  *
- * The lecturer required the colouring to come out of the project's own lexical
- * analysis and not out of a generic plugin (Telegram, 12/08): RichTextFX only
- * paints the spans, every decision about what is a reserved word is taken by
- * the same lexer the compiler runs. That is why this is the one class of the
- * view that imports ANTLR -- and the token TYPE is what is matched, never the
- * text of the word, so a hand-written copy of the lexer can never drift from it.
+ * Por eso es la unica clase de la vista que importa ANTLR, y lo que compara es
+ * el TIPO de token, nunca el texto de la palabra.
  */
 public final class HighlightingCodeArea
 {
+    private static final Logger LOGGER = Logger.getLogger(HighlightingCodeArea.class.getName());
+
     private static final Set<Integer> KEYWORD_TOKENS = Set.of(
         LatinLexer.VARIABILES, LatinLexer.VARIABILES_LOCAL, LatinLexer.MUNERA,
         LatinLexer.MAIOR,      LatinLexer.FIN_PROGRAMA,     LatinLexer.ESTO,
@@ -50,24 +52,40 @@ public final class HighlightingCodeArea
         codeArea.setParagraphGraphicFactory(LineNumberFactory.get(codeArea));
         codeArea.getStyleClass().add("latin-editor");
         codeArea.textProperty().addListener((observable, oldText, newText) ->
-                codeArea.setStyleSpans(0, computeHighlighting(newText)));
+                applyHighlighting(codeArea, newText));
 
         return codeArea;
     }
 
     /**
-     * Package private so the self check of this phase can call it directly: the
-     * invariant that setStyleSpans demands -- the spans have to cover the text
-     * exactly -- is worth verifying without opening a window.
+     * Regla 6 de CLAUDE.md. Sin este try/catch una excepcion aqui muere dentro
+     * del listener de textProperty: el editor deja de colorear en cada tecla y
+     * no queda rastro de por que. Se registra con la excepcion completa (que
+     * lleva mensaje, archivo y numero de linea) y el texto se queda sin estilo
+     * en vez de dejar el editor mudo.
+     */
+    private static void applyHighlighting(CodeArea codeArea, String text)
+    {
+        try
+        {
+            codeArea.setStyleSpans(0, computeHighlighting(text));
+        }
+        catch (RuntimeException exception)
+        {
+            LOGGER.log(Level.SEVERE, "No se pudo colorear el texto del editor.", exception);
+        }
+    }
+
+    /**
+     * Package private para que el self check lo llame sin abrir una ventana:
+     * setStyleSpans exige que los spans cubran el texto EXACTAMENTE.
      *
-     * ponytail: the whole document is lexed again on every keystroke. ANTLR is
-     * far faster than typing at the file sizes of this practice; if it ever
-     * lags, drive it from codeArea.multiPlainChanges().successionEnds(...).
+     * ponytail: se re-lexa el documento entero en cada tecla. Si alguna vez se
+     * siente lento, alimentarlo desde codeArea.multiPlainChanges().
      */
     static StyleSpans<Collection<String>> computeHighlighting(String text)
     {
-        // StyleSpansBuilder.create() throws when no span was added, and an empty
-        // editor is the very first state of the application.
+        // create() lanza si no se agrego ni un span, y el editor arranca vacio.
         if (text.isEmpty())
         {
             return StyleSpans.<Collection<String>>singleton(Collections.emptyList(), 0);
@@ -77,27 +95,19 @@ public final class HighlightingCodeArea
         lexer.removeErrorListeners();   // half typed code is the normal state here
 
         StyleSpansBuilder<Collection<String>> builder = new StyleSpansBuilder<>();
-        int lastEnd = 0;
 
-        // getAllTokens() keeps the HIDDEN channel, which is exactly why the
-        // grammar sends comments and blanks there instead of skipping them:
-        // they get painted and no hole is left in the middle of the text.
+        // getAllTokens() conserva el canal HIDDEN: por eso la gramatica manda
+        // comentarios y espacios ahi en vez de descartarlos con skip. Y como
+        // ninguna regla usa skip, el flujo es contiguo y cubre todo el texto.
+        //
+        // La longitud sale del texto del token y NO de stopIndex - startIndex:
+        // CharStreams.fromString indexa por puntos de codigo y String por
+        // chars, asi que con un emoji los indices del lexer se desalinean y
+        // todo lo que va detras se colorearia corrido.
         for (Token token : lexer.getAllTokens())
         {
-            int start = token.getStartIndex();
-            int end   = token.getStopIndex() + 1;
-
-            if (start > lastEnd)
-            {
-                builder.add(Collections.emptyList(), start - lastEnd);
-            }
-            builder.add(Collections.singleton(styleClassFor(token.getType())), end - start);
-            lastEnd = end;
-        }
-
-        if (lastEnd < text.length())
-        {
-            builder.add(Collections.emptyList(), text.length() - lastEnd);
+            builder.add(Collections.singleton(styleClassFor(token.getType())),
+                        token.getText().length());
         }
         return builder.create();
     }
@@ -119,7 +129,10 @@ public final class HighlightingCodeArea
             case LatinLexer.TEXTO, LatinLexer.CARACTER           -> "string";
             case LatinLexer.COMENTARIO_LINEA,
                  LatinLexer.COMENTARIO_BLOQUE                    -> "comment";
-            case LatinLexer.CARACTER_INVALIDO                    -> "invalid";
+            case LatinLexer.TEXTO_SIN_CERRAR,
+                 LatinLexer.CARACTER_SIN_CERRAR,
+                 LatinLexer.COMENTARIO_SIN_CERRAR,
+                 LatinLexer.CARACTER_INVALIDO                    -> "invalid";
             default                                              -> "plain";
         };
     }

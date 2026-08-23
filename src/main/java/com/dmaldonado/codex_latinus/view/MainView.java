@@ -28,13 +28,9 @@ import org.fxmisc.flowless.VirtualizedScrollPane;
 import org.fxmisc.richtext.CodeArea;
 
 /**
- * THE VIEW (MVC).
- *
- * It builds the window, exposes its controls and knows how to paint a result
- * that is handed to it already computed. It does not compile anything and it
- * does not read a single file: ApplicationController is the only bridge to the
- * model, which is what makes "the interface can be replaced without touching
- * the compiler" a true statement and not a wish.
+ * LA VISTA (MVC). Arma la ventana, expone sus controles y pinta un resultado ya
+ * calculado. No compila ni lee archivos: ApplicationController es el unico
+ * puente al modelo.
  */
 public class MainView extends BorderPane
 {
@@ -46,13 +42,15 @@ public class MainView extends BorderPane
     private final TextArea                 translation = new TextArea();
     private final TabPane                  tabs        = new TabPane();
 
-    // Kept as fields, not as indexes: showResultTab() selects them by reference,
-    // so reordering the tabs can never send the user to the wrong one.
+    // Como campos y no como indices: reordenar las pestanas no puede mandar al
+    // usuario a la equivocada.
     private final Tab errorTab       = new Tab("Errores", errorTable);
     private final Tab translationTab = new Tab("PigLatin");
 
-    private final CheckBox translateKeywordsBox = new CheckBox("Traducir palabras reservadas");
-    private final CheckBox translateStringsBox  = new CheckBox("Traducir contenido de los textos");
+    // Solo queda esta: el enunciado no obliga a traducir el INTERIOR de un
+    // textum, asi que ahi si hay una eleccion. Las palabras reservadas se
+    // traducen siempre ("todo se traduce", Telegram 23/08).
+    private final CheckBox translateStringsBox = new CheckBox("Traducir contenido de los textos");
 
     private final Button newButton     = new Button("Nuevo");
     private final Button openButton    = new Button("Abrir .lat");
@@ -114,12 +112,10 @@ public class MainView extends BorderPane
 
     private BorderPane buildTranslationTab()
     {
-        // They start in sync with the defaults of PigLatinTranslator: reserved
-        // words are translated, the content of a textum is not.
-        translateKeywordsBox.setSelected(true);
+        // En sincronia con el valor por defecto de PigLatinTranslator.
         translateStringsBox.setSelected(false);
 
-        HBox options = new HBox(16, translateKeywordsBox, translateStringsBox);
+        HBox options = new HBox(16, translateStringsBox);
         options.setPadding(new Insets(8));
 
         BorderPane panel = new BorderPane(translation);
@@ -150,12 +146,9 @@ public class MainView extends BorderPane
     }
 
     /**
-     * A lambda instead of PropertyValueFactory on purpose: that one resolves the
-     * getter by reflection over a String, so renaming an accessor would still
-     * compile and fail at runtime with a silently empty column.
-     *
-     * The column keeps the real type of the value (Integer for a line number)
-     * so that sorting by clicking the header is numeric and not alphabetical.
+     * Lambda y no PropertyValueFactory: esa resuelve el getter por reflexion
+     * sobre un String y fallaria en ejecucion con una columna vacia. La columna
+     * conserva el tipo real del valor, asi el orden por Linea es numerico.
      */
     private static <S, T> void addColumn(TableView<S> table, String title, double width,
                                          Function<S, T> value)
@@ -181,7 +174,7 @@ public class MainView extends BorderPane
         symbolTable.setItems(FXCollections.observableArrayList(symbols));
     }
 
-    /** A null root clears the tab: a program with errors must not be graphed. */
+    /** Raiz null limpia la pestana: un programa con errores no se grafica. */
     public void showAst(TreeItem<String> root)
     {
         astTree.setRoot(root);
@@ -209,7 +202,7 @@ public class MainView extends BorderPane
         fileLabel.setText(name);
     }
 
-    /** Brings forward what the user needs next: the errors, or the result. */
+    /** Adelanta lo que el usuario necesita: los errores, o el resultado. */
     public void showResultTab(boolean successful)
     {
         tabs.getSelectionModel().select(successful ? translationTab : errorTab);
@@ -223,7 +216,6 @@ public class MainView extends BorderPane
     public CodeArea                 getCodeArea()             { return codeArea; }
     public TableView<CompilerError> getErrorTable()           { return errorTable; }
     public ProcessStackPanel        getProcessStackPanel()    { return stackPanel; }
-    public CheckBox                 getTranslateKeywordsBox() { return translateKeywordsBox; }
     public CheckBox                 getTranslateStringsBox()  { return translateStringsBox; }
 
     public Button getNewButton()     { return newButton; }

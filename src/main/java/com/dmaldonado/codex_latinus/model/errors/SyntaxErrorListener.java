@@ -6,15 +6,11 @@ import org.antlr.v4.runtime.Recognizer;
 import org.antlr.v4.runtime.Token;
 
 /**
- * Replaces ANTLR's ConsoleErrorListener on the parser: instead of printing to
- * System.err in English, every syntax error goes to the ErrorManager translated
- * to Spanish and with a 1-based column.
+ * Reemplaza al ConsoleErrorListener de ANTLR: en vez de imprimir en ingles a
+ * System.err, cada error de sintaxis va al ErrorManager en espanol y con la
+ * columna 1-based.
  *
- * There is no matching LexicalErrorListener, and that is deliberate. The last
- * rule of the lexer is "CARACTER_INVALIDO : . ;", a catch-all, so the lexer can
- * never fail to match: it always produces a token. A BaseErrorListener on the
- * lexer would never fire. Invalid characters are found by scanning the token
- * stream instead (see LatinCompiler.reportInvalidCharacters).
+ * No existe su equivalente lexico: ver LatinCompiler.reportInvalidCharacters.
  */
 public class SyntaxErrorListener extends BaseErrorListener
 {

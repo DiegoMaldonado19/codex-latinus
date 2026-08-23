@@ -1,12 +1,9 @@
 package com.dmaldonado.codex_latinus.model.stack;
 
 /**
- * Operations shown in the process stack panel.
- *
- * The statement asks for "shift, replace, accept", which is LR vocabulary, and
- * ANTLR4 is LL(*). The engineer confirmed the simulation is what is expected
- * (Telegram 9/08 22:35), so these five names are what the parse tree walk is
- * translated into, not what ANTLR actually does internally.
+ * Operaciones del panel de la pila. El enunciado pide vocabulario LR (shift,
+ * replace, accept) y ANTLR4 es LL(*): el ingeniero confirmo que la simulacion
+ * es lo esperado (Telegram 9/08 22:35).
  */
 public enum StepAction
 {

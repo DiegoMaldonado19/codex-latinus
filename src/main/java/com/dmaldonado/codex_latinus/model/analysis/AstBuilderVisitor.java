@@ -41,29 +41,14 @@ import org.antlr.v4.runtime.Token;
 import org.antlr.v4.runtime.tree.ParseTree;
 
 /**
- * Builds the compiler's own AST from the parse tree, using the visitor that
- * ANTLR generates.
+ * Construye el AST propio a partir del parse tree, con el visitor que genera
+ * ANTLR: visitXxx(ctx) devuelve el nodo de esa regla, y el valor de retorno es
+ * el unico canal entre una regla y su padre.
  *
- * How it works: visitXxx(ctx) returns the AST node for that rule. To get the
- * node of a child, the method calls visit(child) and uses the value it returns.
- * The recursion is explicit, and the return value is the only channel between a
- * rule and its parent, so no side table is needed:
+ * Las reglas puente (un solo hijo) no se sobrescriben: visitChildren() heredado
+ * ya devuelve el resultado del hijo.
  *
- *   visitPrimariaEntero   returns LiteralExpression   (leaves)
- *   visitExpresionAditiva returns BinaryExpression
- *   visitPrograma         returns Program             (root)
- *
- * The grammar labels every alternative (# primariaEntero, # entradaSufija,
- * # literalConNombre ...), so ANTLR generates one visit method per alternative
- * and no if/instanceof is needed to tell them apart.
- *
- * Rules with a SINGLE child are not overridden here on purpose: the inherited
- * visitChildren() already returns that child's result, which is exactly what a
- * bridge rule needs. That covers instruccion, expresion, declaracionGlobal,
- * declaracionFuncion, inicializacionPara, primariaLlamada, primariaLiteral and
- * unariaSufijoDelegado. Rules with several children, such as
- * primariaAgrupacion, DO need an override, because the default would return the
- * result of the last child, which is a token.
+ * Recorrido completo: docs/05-Manual-Tecnico.md (6)
  */
 public class AstBuilderVisitor extends LatinParserBaseVisitor<AstNode>
 {
@@ -133,11 +118,7 @@ public class AstBuilderVisitor extends LatinParserBaseVisitor<AstNode>
                 expression(ctx.literalCompuesto()), line(ctx), column(ctx));
     }
 
-    /**
-     * "esto activo : verum;" declares a boolean whose initial value is the same
-     * word used as the type. It is materialized here so the rest of the
-     * compiler sees an ordinary initialization.
-     */
+    /** "esto activo : verum;": el tipo es tambien el valor, se materializa aqui. */
     private Expression implicitBooleanValue(LatinParser.TipoContext ctx)
     {
         String text = ctx.getText();
@@ -158,12 +139,7 @@ public class AstBuilderVisitor extends LatinParserBaseVisitor<AstNode>
                 arrayTypeText(ctx, values), values, line(ctx), column(ctx));
     }
 
-    /**
-     * "series valores[2] : {verum, verum};" omits the type: it is the form the
-     * assistant gave before 'bool' existed (Telegram 6/08 22:08). The element
-     * type is then inferred from the first literal value. With no type and no
-     * values there is nothing to infer, and the semantic analyzer reports it.
-     */
+    /** Sin tipo explicito se deduce del primer valor; sin valores, lo reporta la semantica. */
     private String arrayTypeText(LatinParser.DeclaracionArregloContext ctx, List<Expression> values)
     {
         if (ctx.tipo() != null)
@@ -231,12 +207,7 @@ public class AstBuilderVisitor extends LatinParserBaseVisitor<AstNode>
                 block(ctx.cuerpoFuncion()), true, line(ctx), column(ctx));
     }
 
-    /**
-     * The body keeps only the statements. The declarations of the VARIABILES[ ]
-     * section are pulled out separately by localVariables(), so the semantic
-     * analyzer can tell a variable declared where the language allows it from
-     * one declared in the middle of the function.
-     */
+    /** El cuerpo guarda solo instrucciones; VARIABILES[ ] sale aparte en localVariables(). */
     @Override
     public AstNode visitCuerpoFuncion(LatinParser.CuerpoFuncionContext ctx)
     {
@@ -295,17 +266,11 @@ public class AstBuilderVisitor extends LatinParserBaseVisitor<AstNode>
                 : null;
     }
 
-    /**
-     * Folds the aliter chain from right to left, so
-     * "si (a) A aliter (b) B aliter C" becomes If(a, A, If(b, B, C)).
-     * The nested IfStatement is what the translator recognizes to print
-     * "aliter (b)" instead of "aliter { si (b)".
-     */
+    /** Pliega la cadena aliter de derecha a izquierda: si(a) A aliter(b) B => If(a,A,If(b,B)). */
     @Override
     public AstNode visitInstruccionSi(LatinParser.InstruccionSiContext ctx)
     {
-        // bloque(0) is the si branch; bloque(1) exists only when a plain
-        // aliter closes the chain. The conditional ones live in their own rule.
+        // bloque(1) solo existe si un aliter sin condicion cierra la cadena.
         AstNode elseBranch = ctx.ALITER() != null ? block(ctx.bloque(1)) : null;
 
         List<LatinParser.AliterCondicionalContext> chain = ctx.aliterCondicional();
@@ -390,16 +355,9 @@ public class AstBuilderVisitor extends LatinParserBaseVisitor<AstNode>
         return new PrintStatement(values, line(ctx), column(ctx));
     }
 
-    // Both forms of the read produce the same node: only the position of the
-    // target changes in the source, not its meaning.
+    /** Without a destino the read discards the value: expression() gives null. */
     @Override
-    public AstNode visitEntradaSufija(LatinParser.EntradaSufijaContext ctx)
-    {
-        return new InputStatement(expression(ctx.destino()), line(ctx), column(ctx));
-    }
-
-    @Override
-    public AstNode visitEntradaPrefija(LatinParser.EntradaPrefijaContext ctx)
+    public AstNode visitInstruccionEntrada(LatinParser.InstruccionEntradaContext ctx)
     {
         return new InputStatement(expression(ctx.destino()), line(ctx), column(ctx));
     }
@@ -442,11 +400,7 @@ public class AstBuilderVisitor extends LatinParserBaseVisitor<AstNode>
     @Override public AstNode visitExpresionAditiva(LatinParser.ExpresionAditivaContext ctx)               { return fold(ctx); }
     @Override public AstNode visitExpresionMultiplicativa(LatinParser.ExpresionMultiplicativaContext ctx) { return fold(ctx); }
 
-    /**
-     * With a single operand the loop never runs and the child's node passes
-     * through untouched, so the AST does not fill up with one child binary
-     * nodes.
-     */
+    /** Con un solo operando el bucle no corre y el hijo pasa intacto. */
     private AstNode fold(ParserRuleContext ctx)
     {
         Expression left = expression(ctx.getChild(0));

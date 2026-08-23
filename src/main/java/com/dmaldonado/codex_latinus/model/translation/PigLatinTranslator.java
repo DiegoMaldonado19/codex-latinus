@@ -32,33 +32,22 @@ import com.dmaldonado.codex_latinus.model.ast.statement.InputStatement;
 import com.dmaldonado.codex_latinus.model.ast.statement.PrintStatement;
 import com.dmaldonado.codex_latinus.model.ast.statement.ReturnStatement;
 import com.dmaldonado.codex_latinus.model.ast.statement.WhileStatement;
-import com.dmaldonado.codex_latinus.model.types.DataType;
 import java.util.List;
 import java.util.stream.Collectors;
 
 /**
- * Translates Latin to PigLatin BY WALKING THE AST.
+ * Traduce a PigLatin RECORRIENDO EL AST, que es lo que el enunciado exige en vez
+ * de un replace o una regex sobre el texto fuente. El visitor devuelve String,
+ * asi que el resultado se compone de abajo hacia arriba.
  *
- * The statement forbids replace and regex over the source text: here every node
- * knows how to write itself in PigLatin, and every word (identifier or reserved
- * word) goes through PigLatinWordConverter. It runs on the AST the semantic
- * analyzer already validated, so it never has to check anything.
- *
- * As the visitor returns String, the result is composed bottom-up: the leaves
- * produce text and the inner nodes assemble it with the right indentation.
+ * Nodo por nodo: docs/05-Manual-Tecnico.md (12)
  */
 public class PigLatinTranslator implements AstVisitor<String>
 {
     private static final String INDENT = "    ";
 
     private int     level;
-    private boolean translateKeywords = true;
-    private boolean translateStrings  = false;
-
-    public void setTranslateKeywords(boolean translateKeywords)
-    {
-        this.translateKeywords = translateKeywords;
-    }
+    private boolean translateStrings = false;
 
     public void setTranslateStrings(boolean translateStrings)
     {
@@ -82,7 +71,7 @@ public class PigLatinTranslator implements AstVisitor<String>
 
         if (!node.getGlobals().isEmpty())
         {
-            out.append(keyword("VARIABILES")).append(">\n");
+            out.append(PigLatinWordConverter.convert("VARIABILES")).append(">\n");
             level++;
             for (AstNode global : node.getGlobals())
             {
@@ -94,7 +83,7 @@ public class PigLatinTranslator implements AstVisitor<String>
 
         if (!node.getFunctions().isEmpty())
         {
-            out.append(keyword("MUNERA")).append(">\n");
+            out.append(PigLatinWordConverter.convert("MUNERA")).append(">\n");
             level++;
             for (FunctionDeclaration function : node.getFunctions())
             {
@@ -104,7 +93,7 @@ public class PigLatinTranslator implements AstVisitor<String>
             out.append('\n');
         }
 
-        out.append(keyword("MAIOR")).append(">\n");
+        out.append(PigLatinWordConverter.convert("MAIOR")).append(">\n");
         level++;
         for (AstNode statement : node.getMainStatements())
         {
@@ -112,20 +101,16 @@ public class PigLatinTranslator implements AstVisitor<String>
         }
         level--;
 
-        return out.append('\n').append(keyword("FINIS")).append(";\n").toString();
+        return out.append('\n').append(PigLatinWordConverter.convert("FINIS"))
+                  .append(";\n").toString();
     }
 
-    /**
-     * "esto bloqueado : falsus;" declares the value with the same word it uses
-     * as the type, and AstBuilderVisitor materializes that value in the AST.
-     * Writing it back would produce "alsusfay alsusfay", so that synthesized
-     * literal is dropped here and the declaration keeps its original shape.
-     */
+    /** El valor sintetizado de "esto x : falsus;" se omite: saldria "alsusfay alsusfay". */
     @Override
     public String visitVariableDeclaration(VariableDeclaration node)
     {
         StringBuilder line = new StringBuilder(indent())
-                .append(keyword("esto")).append(' ')
+                .append(PigLatinWordConverter.convert("esto")).append(' ')
                 .append(PigLatinWordConverter.convert(node.getName()))
                 .append(" : ").append(typeName(node.getTypeText()));
 
@@ -146,7 +131,7 @@ public class PigLatinTranslator implements AstVisitor<String>
     public String visitArrayDeclaration(ArrayDeclaration node)
     {
         StringBuilder line = new StringBuilder(indent())
-                .append(keyword("series")).append(' ')
+                .append(PigLatinWordConverter.convert("series")).append(' ')
                 .append(PigLatinWordConverter.convert(node.getName()))
                 .append('[').append(node.getSize().accept(this)).append(']')
                 .append(" : ").append(typeName(node.getTypeText()));
@@ -162,7 +147,7 @@ public class PigLatinTranslator implements AstVisitor<String>
     public String visitStructDeclaration(StructDeclaration node)
     {
         StringBuilder out = new StringBuilder(indent())
-                .append(keyword("structura")).append(' ')
+                .append(PigLatinWordConverter.convert("structura")).append(' ')
                 .append(PigLatinWordConverter.convert(node.getName()))
                 .append(" {\n");
 
@@ -173,30 +158,28 @@ public class PigLatinTranslator implements AstVisitor<String>
         }
         level--;
 
-        return out.append(indent()).append("} ").append(keyword("finis")).append(';').toString();
+        return out.append(indent()).append("} ")
+                  .append(PigLatinWordConverter.convert("finis")).append(';').toString();
     }
 
     /** A field declared with "series" is an array, and it carries no size. */
     @Override
     public String visitStructField(StructField node)
     {
-        return indent() + keyword(node.isArray() ? "series" : "esto") + ' '
-             + PigLatinWordConverter.convert(node.getName())
+        return indent() + PigLatinWordConverter.convert(node.isArray() ? "series" : "esto")
+             + ' ' + PigLatinWordConverter.convert(node.getName())
              + " : " + typeName(node.getTypeText()) + ';';
     }
 
     @Override
     public String visitParameter(Parameter node)
     {
-        return keyword("esto") + ' ' + PigLatinWordConverter.convert(node.getName())
+        return PigLatinWordConverter.convert("esto")
+             + ' ' + PigLatinWordConverter.convert(node.getName())
              + " : " + typeName(node.getTypeText());
     }
 
-    /**
-     * The body is assembled here instead of delegating to visitBlock, because
-     * the AST keeps the VARIABILES[ ] section apart from the statements and
-     * both have to be written back inside the same braces.
-     */
+    /** No delega en visitBlock: VARIABILES[ ] y las instrucciones van en las mismas llaves. */
     @Override
     public String visitFunctionDeclaration(FunctionDeclaration node)
     {
@@ -208,12 +191,12 @@ public class PigLatinTranslator implements AstVisitor<String>
 
         if (node.returnsValue())
         {
-            out.append(keyword("ratio")).append(' ')
+            out.append(PigLatinWordConverter.convert("ratio")).append(' ')
                .append(typeName(node.getReturnTypeText())).append(' ');
         }
         else
         {
-            out.append(keyword("actio")).append(' ');
+            out.append(PigLatinWordConverter.convert("actio")).append(' ');
         }
 
         out.append(PigLatinWordConverter.convert(node.getName()))
@@ -222,7 +205,8 @@ public class PigLatinTranslator implements AstVisitor<String>
         level++;
         if (!node.getLocalVariables().isEmpty())
         {
-            out.append(indent()).append(keyword("VARIABILES")).append("[\n");
+            out.append(indent()).append(PigLatinWordConverter.convert("VARIABILES"))
+               .append("[\n");
             level++;
             for (AstNode local : node.getLocalVariables())
             {
@@ -237,7 +221,8 @@ public class PigLatinTranslator implements AstVisitor<String>
         }
         level--;
 
-        return out.append(indent()).append("} ").append(keyword("finis")).append(';').toString();
+        return out.append(indent()).append("} ")
+                  .append(PigLatinWordConverter.convert("finis")).append(';').toString();
     }
 
     /* =================================================================
@@ -265,23 +250,20 @@ public class PigLatinTranslator implements AstVisitor<String>
              + node.getValue().accept(this) + ';';
     }
 
-    /**
-     * AstBuilderVisitor folds "aliter (c)" into a nested IfStatement, so the
-     * chain is unrolled back here: otherwise the output would nest a whole new
-     * conditional block for every link of the chain.
-     */
+    /** Despliega la cadena que AstBuilderVisitor plego en IfStatement anidados. */
     @Override
     public String visitIfStatement(IfStatement node)
     {
         StringBuilder out = new StringBuilder(indent())
-                .append(keyword("si")).append(" (").append(node.getCondition().accept(this))
+                .append(PigLatinWordConverter.convert("si")).append(" (")
+                .append(node.getCondition().accept(this))
                 .append(") ").append(node.getThenBranch().accept(this));
 
         AstNode elseBranch = node.getElseBranch();
 
         while (elseBranch instanceof IfStatement nested)
         {
-            out.append(' ').append(keyword("aliter")).append(" (")
+            out.append(' ').append(PigLatinWordConverter.convert("aliter")).append(" (")
                .append(nested.getCondition().accept(this)).append(") ")
                .append(nested.getThenBranch().accept(this));
             elseBranch = nested.getElseBranch();
@@ -289,30 +271,32 @@ public class PigLatinTranslator implements AstVisitor<String>
 
         if (elseBranch instanceof Block block)
         {
-            out.append(' ').append(keyword("aliter")).append(' ').append(block.accept(this));
+            out.append(' ').append(PigLatinWordConverter.convert("aliter"))
+               .append(' ').append(block.accept(this));
         }
-        return out.append(' ').append(keyword("finis")).append(';').toString();
+        return out.append(' ').append(PigLatinWordConverter.convert("finis"))
+                  .append(';').toString();
     }
 
     @Override
     public String visitWhileStatement(WhileStatement node)
     {
-        return indent() + keyword("dum") + " (" + node.getCondition().accept(this) + ") "
-             + node.getBody().accept(this) + ' ' + keyword("finis") + ';';
+        return indent() + PigLatinWordConverter.convert("dum")
+             + " (" + node.getCondition().accept(this) + ") "
+             + node.getBody().accept(this) + ' '
+             + PigLatinWordConverter.convert("finis") + ';';
     }
 
     @Override
     public String visitDoWhileStatement(DoWhileStatement node)
     {
-        return indent() + keyword("facere") + ' ' + node.getBody().accept(this)
-             + ' ' + keyword("dum") + " (" + node.getCondition().accept(this) + ");";
+        return indent() + PigLatinWordConverter.convert("facere")
+             + ' ' + node.getBody().accept(this)
+             + ' ' + PigLatinWordConverter.convert("dum")
+             + " (" + node.getCondition().accept(this) + ");";
     }
 
-    /**
-     * The initialization is a statement and already carries its own ';', which
-     * is exactly what the "per (init; cond; update)" syntax needs. The update
-     * is a statement too, so its ';' is the one that has to go.
-     */
+    /** La inicializacion ya trae su ';'; la actualizacion es la que lo pierde. */
     @Override
     public String visitForStatement(ForStatement node)
     {
@@ -321,28 +305,29 @@ public class PigLatinTranslator implements AstVisitor<String>
 
         update = update.endsWith(";") ? update.substring(0, update.length() - 1) : update;
 
-        return indent() + keyword("per") + " (" + initialization + ' '
+        return indent() + PigLatinWordConverter.convert("per") + " (" + initialization + ' '
              + node.getCondition().accept(this) + "; " + update + ") "
-             + node.getBody().accept(this) + ' ' + keyword("finis") + ';';
+             + node.getBody().accept(this) + ' '
+             + PigLatinWordConverter.convert("finis") + ';';
     }
 
     @Override
     public String visitReturnStatement(ReturnStatement node)
     {
         String value = node.getValue() == null ? "" : ' ' + node.getValue().accept(this);
-        return indent() + keyword("reddere") + value + ';';
+        return indent() + PigLatinWordConverter.convert("reddere") + value + ';';
     }
 
     @Override
     public String visitBreakStatement(BreakStatement node)
     {
-        return indent() + keyword("interrumpe") + ';';
+        return indent() + PigLatinWordConverter.convert("interrumpe") + ';';
     }
 
     @Override
     public String visitContinueStatement(ContinueStatement node)
     {
-        return indent() + keyword("perge") + ';';
+        return indent() + PigLatinWordConverter.convert("perge") + ';';
     }
 
     /** LEY PORCINA: every output arrow of the instruction becomes a %OINK. */
@@ -354,15 +339,14 @@ public class PigLatinTranslator implements AstVisitor<String>
     }
 
     /**
-     * LEY PORCINA: the read arrow becomes %OINK_OINK. The prefix form is used
-     * because a bare read with no target is valid, and the target can be a
-     * whole chain such as mi_selva.animales[1].
+     * LEY PORCINA: '<<' becomes %OINK_OINK, in the same position it had in the
+     * source, and the read is the one instruction that carries no ';'.
      */
     @Override
     public String visitInputStatement(InputStatement node)
     {
-        String target = node.getTarget() == null ? "" : ' ' + node.getTarget().accept(this);
-        return indent() + PigLatinWordConverter.INPUT_OINK + target + ';';
+        String target = node.getTarget() == null ? "" : node.getTarget().accept(this) + ' ';
+        return indent() + target + PigLatinWordConverter.INPUT_OINK;
     }
 
     @Override
@@ -392,7 +376,7 @@ public class PigLatinTranslator implements AstVisitor<String>
     public String visitUnaryExpression(UnaryExpression node)
     {
         String operator = "non".equals(node.getOperator())
-                ? keyword("non") + ' '
+                ? PigLatinWordConverter.convert("non") + ' '
                 : node.getOperator();
         return operator + operand(node.getOperand());
     }
@@ -414,7 +398,7 @@ public class PigLatinTranslator implements AstVisitor<String>
             case TEXTUM   -> translateStrings
                              ? PigLatinWordConverter.convertText(node.getText())
                              : node.getText();
-            case BOOLEANO -> keyword(node.getText());
+            case BOOLEANO -> PigLatinWordConverter.convert(node.getText());
             default       -> node.getText();      // numbers and characters
         };
     }
@@ -445,11 +429,7 @@ public class PigLatinTranslator implements AstVisitor<String>
              + '(' + join(node.getArguments(), ", ") + ')';
     }
 
-    /**
-     * The attribute name of a named literal is an identifier like any other, so
-     * it is translated too: the statement asks for the code to be converted
-     * "palabra por palabra", not only the variable names.
-     */
+    /** El nombre del atributo es un identificador mas: tambien se traduce. */
     @Override
     public String visitCompositeLiteralExpression(CompositeLiteralExpression node)
     {
@@ -476,34 +456,13 @@ public class PigLatinTranslator implements AstVisitor<String>
      * Support
      * ================================================================= */
 
-    /** Reserved words follow the checkbox; identifiers are always translated. */
-    private String keyword(String reservedWord)
-    {
-        return translateKeywords ? PigLatinWordConverter.convert(reservedWord) : reservedWord;
-    }
-
-    /**
-     * A type is either a reserved word of the language or the name of a
-     * structura. The name of a structura is an identifier, so it follows the
-     * same rule as the declaration that created it and is always translated.
-     */
+    /** Palabra reservada o nombre de structura: "todo se traduce" (Telegram 23/08). */
     private String typeName(String typeText)
     {
-        if (typeText == null)
-        {
-            return "";
-        }
-        return DataType.fromText(typeText) == DataType.ESTRUCTURA
-                ? PigLatinWordConverter.convert(typeText)
-                : keyword(typeText);
+        return typeText == null ? "" : PigLatinWordConverter.convert(typeText);
     }
 
-    /**
-     * The AST folds the precedence chain and drops the grouping the source had,
-     * so a binary expression used as the operand of another one is written back
-     * inside parentheses. Anywhere else the syntax already delimits the whole
-     * expression -- si (...), an index, an argument -- and they would be noise.
-     */
+    /** El AST perdio los parentesis del fuente: se reponen solo entre binarias. */
     private String operand(Expression expression)
     {
         return expression instanceof BinaryExpression

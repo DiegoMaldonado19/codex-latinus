@@ -3,12 +3,9 @@ package com.dmaldonado.codex_latinus.model.ast;
 import java.util.List;
 
 /**
- * Root of the Abstract Syntax Tree hierarchy (Composite pattern).
- *
- * Every node knows its position in the source file so errors can be reported
- * as line:column, and accepts a visitor. getLabel() and getChildren() let the
- * AST graph and any generic traversal work on any node without knowing its
- * concrete type.
+ * Raiz del AST (patron Composite). Cada nodo conoce su posicion para reportar
+ * linea:columna y acepta un visitante. getLabel() y getChildren() permiten
+ * graficarlo sin conocer un solo tipo concreto.
  */
 public abstract class AstNode
 {

@@ -6,13 +6,11 @@ import java.util.Comparator;
 import java.util.List;
 
 /**
- * Single accumulator shared by the whole pipeline: the syntax listener, the
- * invalid character scan and the semantic analyzer all write here.
+ * Acumulador unico del pipeline: el listener de sintaxis, el barrido de
+ * caracteres invalidos y el analizador semantico escriben aqui.
  *
- * ANTLR's default behaviour (print the first error to System.err in English and
- * carry on) is useless for this project: the statement wants every error listed
- * in the interface with line:column, and the pipeline has to decide where to
- * stop based on WHICH kind of errors appeared. Both need one owner of the list.
+ * Un solo dueno de la lista, porque el pipeline decide donde cortar segun QUE
+ * tipo de errores aparecieron.
  */
 public class ErrorManager
 {

@@ -1,11 +1,15 @@
-// Espera: error LEXICO. El pipeline se detiene sin intentar parsear.
+// Espera: errores LEXICOS. El pipeline se detiene sin intentar parsear.
+// Cuatro clases distintas, cada una con su propio mensaje.
 VARIABILES>
 
 esto edad : numerus 20;
-esto # : numerus 1;
+esto # : numerus 1;             // simbolo no reconocido
+esto saludo : textum "sin cerrar;
+esto inicial : littera 'a;
 
 MAIOR>
 
 >> edad;
 
+/* este comentario nunca cierra
 FINIS;

@@ -7,23 +7,15 @@ options { tokenVocab = LatinLexer; }
  *
  *  >>> GRAMATICA LIBRE DE RECURSIVIDAD POR LA IZQUIERDA <<<
  *
- *  Toda la cadena de precedencia de expresiones usa el patron iterativo
- *  A : B (op B)* , que es el resultado de aplicar la eliminacion clasica
- *  de recursividad izquierda:
- *
- *      E -> E + T | T                    (recursiva por la izquierda)
- *      ---------------------------------------------------------------
- *      E  -> T E'
- *      E' -> + T E' | epsilon   ==   T ( '+' T )*
- *
- *  Se escribe asi a proposito, aunque ANTLR4 soporte recursividad
- *  izquierda: cada nivel de precedencia queda como una regla nombrada
- *  distinta, que es el punto de enganche que necesita el listener de la
- *  pila de procesos para simular shift/reduce.
+ *  Toda la precedencia usa el patron iterativo A : B (op B)* , resultado
+ *  de la eliminacion clasica:  E -> E + T | T   ==   T ( '+' T )*
  *
  *  Precedencia (de menor a mayor):
  *      ||  ->  &&  ->  == !=  ->  < > <= >=  ->  + -  ->  * /  ->
  *      non, - unario, ++/-- prefijos  ->  sufijos ([] . ())  ->  primaria
+ *
+ *  Por que se escribe asi si ANTLR4 soporta recursividad izquierda, y
+ *  la gramatica regla por regla: docs/05-Manual-Tecnico.md (5)
  * ===================================================================== */
 
 /* =====================================================================
@@ -51,14 +43,9 @@ declaracionGlobal
 // esto edad : numerus 20;
 // esto mi_selva : Selva { valido: verum, animales: Animal[7] }
 //
-// El ';' final es opcional cuando el valor inicial es un literal de
-// estructura, porque el auxiliar confirmo que esas declaraciones
-// "terminan con los }". El '=' tambien es opcional: el enunciado lo usa
-// una sola vez ("esto resultado : numerus = calcularPoder(10, 0.5);").
-//
-// Las dos alternativas son viables para "esto x : Persona {...};", y
-// ANTLR resuelve el empate por orden de declaracion: gana la primera, asi
-// que ese caso siempre sale como declaracionVariableEstructura.
+// El ';' es opcional tras un literal de estructura ("terminan con los }",
+// confirmado por el auxiliar) y el '=' es opcional en toda declaracion.
+// Ante el empate ANTLR gana la primera alternativa.
 declaracionVariable
     : ESTO ID DOS_PUNTOS tipo ASIGNACION? literalCompuesto PUNTO_COMA?  # declaracionVariableEstructura
     | ESTO ID DOS_PUNTOS tipo ( ASIGNACION? expresion )? PUNTO_COMA     # declaracionVariableSimple
@@ -66,10 +53,8 @@ declaracionVariable
 
 // series mis_enteros[2] : numerus {1, 1};
 //
-// El tipo es opcional por la forma vieja del arreglo booleano que dio el
-// auxiliar antes de que existiera 'bool' (Telegram 6/08 22:08):
-//     series valores[2] : {verum, verum};
-// Cuando falta, el AstBuilderVisitor infiere el tipo del primer valor.
+// El tipo es opcional por la forma vieja del arreglo booleano
+// (Telegram 6/08 22:08): "series valores[2] : {verum, verum};".
 declaracionArreglo
     : SERIES ID COR_IZQ expresion COR_DER DOS_PUNTOS tipo?
       ( LLAVE_IZQ listaExpresiones? LLAVE_DER )?
@@ -81,10 +66,8 @@ declaracionEstructura
     : STRUCTURA ID LLAVE_IZQ atributoEstructura* LLAVE_DER FINIS PUNTO_COMA
     ;
 
-// Un campo arreglo dentro de una structura NO lleva tamano: la dimension
-// se da recien al declarar la variable (series animales : Animal;).
-// El separador puede ser ';' o ',' porque el enunciado usa ambos, y es
-// opcional en el ultimo campo.
+// Un campo arreglo NO lleva tamano: la dimension llega al declarar la
+// variable. El separador puede ser ';' o ',': el enunciado usa ambos.
 atributoEstructura
     : ESTO   ID DOS_PUNTOS tipo ( PUNTO_COMA | COMA )?   # campoSimple
     | SERIES ID DOS_PUNTOS tipo ( PUNTO_COMA | COMA )?   # campoArreglo
@@ -121,9 +104,8 @@ funcionConRetorno
     : RATIO tipo ID PAR_IZQ listaParametros? PAR_DER cuerpoFuncion FINIS PUNTO_COMA
     ;
 
-// El cuerpo de una funcion puede abrir con la seccion VARIABILES[ ... ],
-// que es el unico lugar donde el enunciado permite declarar variables
-// locales. Es distinto de bloque (el de si/dum/per), que no la lleva.
+// VARIABILES[ ... ] es el unico lugar donde se declaran locales. Por eso
+// cuerpoFuncion es distinto de bloque (el de si/dum/per).
 cuerpoFuncion
     : LLAVE_IZQ seccionVariablesLocales? instruccion* LLAVE_DER
     ;
@@ -159,8 +141,6 @@ instruccion
 
 // x = 5;   arr[0] = 5;   persona.edad = 5;
 // mi_selva.animales[1] = { nombre: "Perro", apodo: "Canis" }
-// El ';' es opcional solo en la forma que asigna un literal de estructura,
-// tal como aparece en el enunciado.
 asignacion
     : destino ASIGNACION literalCompuesto PUNTO_COMA?  # asignacionEstructura
     | destino ASIGNACION expresion PUNTO_COMA          # asignacionSimple
@@ -181,8 +161,7 @@ instruccionIncremento : destino ( INCREMENTO | DECREMENTO ) PUNTO_COMA ;
 instruccionLlamada : llamadaFuncion PUNTO_COMA ;
 
 // si (c) { } aliter (c2) { } aliter { } finis;
-// La cadena de aliter con condicion es lo que permite el else-if del
-// enunciado. El aliter final, sin condicion, va aparte y es opcional.
+// La cadena de aliter con condicion es el else-if; el aliter final va aparte.
 instruccionSi
     : SI PAR_IZQ expresion PAR_DER bloque
       aliterCondicional*
@@ -203,9 +182,8 @@ instruccionHacerMientras
     ;
 
 // per (esto i : numerus 0; i < 10; i++) { }
-// La inicializacion y la condicion consumen cada una su propio ';'.
-// El finis; final es opcional: el enunciado lo muestra en unos ciclos
-// y en otros no.
+// La inicializacion y la condicion consumen cada una su ';'. El finis;
+// final es opcional: el enunciado lo muestra en unos ciclos y en otros no.
 instruccionPara
     : PER PAR_IZQ inicializacionPara expresion PUNTO_COMA
       actualizacionPara PAR_DER bloque ( FINIS PUNTO_COMA )?
@@ -226,18 +204,12 @@ instruccionPerge      : PERGE PUNTO_COMA ;
 // >> "Bienvenido" >> comandante ;
 instruccionSalida : SALIDA expresion ( SALIDA expresion )* PUNTO_COMA ;
 
-// comandante <<     |     << comandante     |     <<
-// La lectura es la unica instruccion que NO termina en ';' (confirmado
-// por el auxiliar), pero se acepta igual si viene.
-//
-// ponytail: un '<<' solo, seguido de una instruccion que empieza con ID,
-// se traga ese ID como destino porque 'destino?' es greedy. Es ambiguedad
-// del propio lenguaje del enunciado; se documenta en vez de inventar una
-// regla artificial para taparla.
-instruccionEntrada
-    : destino ENTRADA PUNTO_COMA?    # entradaSufija
-    | ENTRADA destino? PUNTO_COMA?   # entradaPrefija
-    ;
+// comandante <<   guarda lo leido    |    <<   lee y descarta
+// Unica instruccion que NO termina en ';' (confirmado por el auxiliar),
+// pero se acepta igual si viene. Sin destino, lee y descarta.
+// El destino va ANTES del '<<': una forma prefija haria que un '<<' solo se
+// tragara el ID de la instruccion siguiente.
+instruccionEntrada : destino? ENTRADA PUNTO_COMA? ;
 
 /* =====================================================================
  * 5. EXPRESIONES  -- SIN RECURSIVIDAD POR LA IZQUIERDA --
@@ -281,12 +253,9 @@ expresionPrimaria
     | literalCompuesto             # primariaLiteral
     ;
 
-// Con nombre de atributo para instanciar structuras (orden libre,
-// separado por ',' o ';'), y posicional para arreglos: {1, 1}.
-//
-// "animales: Animal[7]" no necesita regla propia: parsea como
-// sufijoIndice sobre un identificador, y el analizador semantico lo
-// distingue por el tipo declarado del campo.
+// Con nombre para structuras (orden libre), posicional para arreglos.
+// "animales: Animal[7]" no necesita regla propia: parsea como sufijoIndice
+// y la semantica lo distingue por el tipo declarado del campo.
 literalCompuesto
     : LLAVE_IZQ campoLiteral ( ( COMA | PUNTO_COMA ) campoLiteral )* LLAVE_DER  # literalConNombre
     | LLAVE_IZQ listaExpresiones? LLAVE_DER                                     # literalPosicional

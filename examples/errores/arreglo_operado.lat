@@ -1,0 +1,18 @@
+// Espera: "Solo se podran operar los valores primitivos. No se consideran
+// primitivos los arreglos de datos". El nombre pelado del arreglo no se
+// puede operar; indexado si.
+VARIABILES>
+
+esto edad : numerus 20;
+series numeros[2] : numerus {1, 1};
+
+MAIOR>
+
+>> numeros + 1;
+>> edad * numeros;
+>> non numeros;
+>> -numeros;
+numeros++;
+>> numeros[0] + 1;        // valido: un elemento si es primitivo
+
+FINIS;

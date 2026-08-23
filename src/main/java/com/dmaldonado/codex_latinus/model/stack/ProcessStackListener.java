@@ -12,26 +12,15 @@ import org.antlr.v4.runtime.tree.ParseTreeListener;
 import org.antlr.v4.runtime.tree.TerminalNode;
 
 /**
- * Records the parser's process stack so the interface can replay it step by
- * step with Anterior / Siguiente buttons.
+ * Registra la pila de procesos para que la interfaz la reproduzca paso a paso.
+ * ANTLR4 es LL(*): no hay pila LR que leer, se simula desde los eventos del
+ * recorrido (PUSH, SHIFT, REDUCE, ACCEPT, ERROR).
  *
- * ANTLR4 is LL(*), top-down: there is no LR table stack to read. The stack the
- * user sees is built here, reading the events of the tree walk as if they were
- * the operations the statement asks for:
+ * Va sobre el arbol YA construido, no con addParseListener(): durante el parse
+ * la prediccion ALL(*) puede probar una regla y retroceder, y el mismo paso
+ * saldria dos veces o fuera de orden.
  *
- *   PUSH   -> a rule is entered and stays active
- *   SHIFT  -> a token of the input is consumed
- *   REDUCE -> the rule ends and is replaced by its node
- *   ACCEPT -> the start rule is reduced with the stack empty
- *   ERROR  -> an unexpected token
- *
- * It is driven by ParseTreeWalker over the tree that is ALREADY built, not by
- * parser.addParseListener(): during the parse itself, ALL(*) prediction can try
- * a rule and back out of it, and error recovery can re-enter one, so the same
- * step would show up twice or out of order in the panel.
- *
- * Implements the runtime's ParseTreeListener, not the one ANTLR generates, so
- * it keeps working with <listener>false</listener> in the pom.
+ * Mapeo evento a accion: docs/05-Manual-Tecnico.md (11)
  */
 public class ProcessStackListener implements ParseTreeListener
 {
@@ -59,10 +48,7 @@ public class ProcessStackListener implements ParseTreeListener
         record(StepAction.PUSH, "Se activa la regla <" + rule + ">", ctx.getStart());
     }
 
-    /**
-     * getSymbolicName returns null for EOF, which is a real terminal of the
-     * tree because the rule "programa" ends in it.
-     */
+    /** getSymbolicName devuelve null para EOF, que si es un terminal del arbol. */
     @Override
     public void visitTerminal(TerminalNode node)
     {
@@ -84,9 +70,8 @@ public class ProcessStackListener implements ParseTreeListener
         }
         record(StepAction.REDUCE, "Se reduce <" + rule + "> a un nodo del arbol", stop(ctx));
 
-        // "sin errores pendientes": ANTLR recovers from a syntax error and
-        // still finishes the tree, so reducing the start rule is not enough to
-        // accept. The parse is over by now, so the count is already final.
+        // ANTLR se recupera de un error y termina el arbol igual, asi que reducir
+        // la regla inicial no basta para aceptar.
         if (stack.isEmpty() && "programa".equals(rule) && parser.getNumberOfSyntaxErrors() == 0)
         {
             record(StepAction.ACCEPT, "Cadena aceptada por la gramatica", stop(ctx));
@@ -100,11 +85,8 @@ public class ProcessStackListener implements ParseTreeListener
     }
 
     /**
-     * The stack is copied on every step on purpose: that is what lets the panel
-     * jump to any step without replaying the parse.
-     *
-     * ArrayDeque iterates from the top, so it is reversed to store it base
-     * first, which is the order formattedStack() expects.
+     * Copia la pila en cada paso: es lo que permite saltar a cualquiera sin
+     * rehacer el parse. ArrayDeque itera desde la cima, por eso se invierte.
      */
     private void record(StepAction action, String detail, Token token)
     {
@@ -114,7 +96,7 @@ public class ProcessStackListener implements ParseTreeListener
                 token == null ? 0 : token.getCharPositionInLine() + 1));
     }
 
-    /** A rule with no tokens of its own has no stop token, only a start one. */
+    /** Una regla sin tokens propios no tiene stop, solo start. */
     private Token stop(ParserRuleContext ctx)
     {
         return ctx.getStop() != null ? ctx.getStop() : ctx.getStart();

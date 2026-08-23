@@ -48,14 +48,11 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Semantic analysis of the Latin language.
+ * Semantic analysis: every visitX validates its rule and returns the DataType,
+ * so the parent keeps composing the check upwards. On failure it reports the
+ * error and returns ERROR instead of throwing.
  *
- * Every visitX method does two things: it validates the rule that applies to
- * that node, and it RETURNS the DataType of the expression so the parent node
- * can keep composing the type check upwards. When something does not fit, the
- * error goes to the ErrorManager and DataType.ERROR is returned: the rest of
- * the tree keeps being analyzed, no exception is thrown, and one real mistake
- * does not print ten messages.
+ * Detalle regla por regla: docs/05-Manual-Tecnico.md (9)
  */
 public class SemanticAnalyzer implements AstVisitor<DataType>
 {
@@ -66,8 +63,11 @@ public class SemanticAnalyzer implements AstVisitor<DataType>
     private FunctionDeclaration currentFunction;
     /** Loop nesting: interrumpe/perge are only valid when greater than zero. */
     private int                 loopDepth;
-    /** True inside the body of si/dum/facere/per, where declaring is forbidden. */
-    private boolean             inControlBlock;
+    /**
+     * True donde el enunciado prohibe declarar: el cuerpo de si/dum/facere/per
+     * y el cuerpo de una funcion, cuyas variables van todas en VARIABILES[ ].
+     */
+    private boolean             declarationsForbidden;
     /** Only to give each per scope a distinct name in the symbol table graph. */
     private int                 forCounter;
 
@@ -81,14 +81,7 @@ public class SemanticAnalyzer implements AstVisitor<DataType>
      * PROGRAM
      * ================================================================= */
 
-    /**
-     * Two passes.
-     *
-     * Functions and structuras can be used BEFORE the line that declares them
-     * (a forward call, two structuras referring to each other), so pass 1
-     * registers signatures only, and pass 2 walks the bodies with every name
-     * already available.
-     */
+    /** Paso 1 registra firmas, paso 2 recorre cuerpos: permite el uso adelantado. */
     @Override
     public DataType visitProgram(Program node)
     {
@@ -153,8 +146,6 @@ public class SemanticAnalyzer implements AstVisitor<DataType>
 
             if (struct == null)
             {
-                // Stop here: checking the initial value against a type that does
-                // not exist can only produce noise derived from this same error.
                 error(node, "El tipo '" + node.getTypeText() + "' no existe.", node.getTypeText());
                 symbolTable.declare(new VariableSymbol(node.getName(), DataType.ERROR,
                         node.getTypeText(), SymbolCategory.VARIABLE,
@@ -278,12 +269,7 @@ public class SemanticAnalyzer implements AstVisitor<DataType>
         return elementType;
     }
 
-    /**
-     * Only reached for a structura written as a plain statement, that is, one
-     * outside VARIABILES> and outside the VARIABILES[ ] section of a function.
-     * The ones in those two places are registered by visitProgram and
-     * visitFunctionDeclaration, before any body is walked.
-     */
+    /** Solo para una structura suelta: las de VARIABILES ya las registro el paso 1. */
     @Override
     public DataType visitStructDeclaration(StructDeclaration node)
     {
@@ -307,13 +293,13 @@ public class SemanticAnalyzer implements AstVisitor<DataType>
     @Override
     public DataType visitFunctionDeclaration(FunctionDeclaration node)
     {
-        FunctionDeclaration previousFunction = currentFunction;
-        boolean             previousBlock    = inControlBlock;
-        int                 previousDepth    = loopDepth;
+        FunctionDeclaration previousFunction  = currentFunction;
+        boolean             previousForbidden = declarationsForbidden;
+        int                 previousDepth     = loopDepth;
 
-        currentFunction = node;
-        inControlBlock  = false;
-        loopDepth       = 0;
+        currentFunction       = node;
+        declarationsForbidden = false;   // VARIABILES[ ] es justo donde SI se declara
+        loopDepth             = 0;
 
         symbolTable.openScope(node.getName());
 
@@ -344,8 +330,7 @@ public class SemanticAnalyzer implements AstVisitor<DataType>
                     parameter.getLine(), parameter.getColumn()));
         }
 
-        // Local structuras go in first, so a local variable declared on the next
-        // line can already use them (Telegram 6/08 20:04).
+        // Las structuras locales van primero: la siguiente variable ya puede usarlas.
         for (AstNode local : node.getLocalVariables())
         {
             if (local instanceof StructDeclaration struct)
@@ -365,6 +350,10 @@ public class SemanticAnalyzer implements AstVisitor<DataType>
             }
         }
 
+        // Enunciado: "dentro de las funciones solo se pueden definir variables
+        // al principio". Pasada la seccion VARIABILES[ ], el cuerpo ya no admite
+        // ninguna declaracion mas.
+        declarationsForbidden = true;
         node.getBody().accept(this);
         symbolTable.closeScope();
 
@@ -374,9 +363,9 @@ public class SemanticAnalyzer implements AstVisitor<DataType>
                     + "' no retorna un valor en todos sus caminos posibles.", node.getName());
         }
 
-        currentFunction = previousFunction;
-        inControlBlock  = previousBlock;
-        loopDepth       = previousDepth;
+        currentFunction       = previousFunction;
+        declarationsForbidden = previousForbidden;
+        loopDepth             = previousDepth;
         return node.getReturnType();
     }
 
@@ -384,12 +373,7 @@ public class SemanticAnalyzer implements AstVisitor<DataType>
      * STATEMENTS
      * ================================================================= */
 
-    /**
-     * No new scope is opened here. Declaring inside a control block is already
-     * an error (see requireDeclarationPlace), so a block scope would always be
-     * empty and would only add noise to the symbol table graph. The scopes that
-     * exist are: global, one per function, MAIOR, and one per per loop.
-     */
+    /** No abre ambito: declarar dentro de un bloque de control ya es error. */
     @Override
     public DataType visitBlock(Block node)
     {
@@ -428,8 +412,8 @@ public class SemanticAnalyzer implements AstVisitor<DataType>
     {
         requireBooleanCondition(node.getCondition(), "si");
 
-        boolean previousBlock = inControlBlock;
-        inControlBlock = true;
+        boolean previousForbidden = declarationsForbidden;
+        declarationsForbidden = true;
 
         node.getThenBranch().accept(this);
 
@@ -437,7 +421,7 @@ public class SemanticAnalyzer implements AstVisitor<DataType>
         {
             node.getElseBranch().accept(this);
         }
-        inControlBlock = previousBlock;
+        declarationsForbidden = previousForbidden;
         return DataType.VOID;
     }
 
@@ -462,13 +446,18 @@ public class SemanticAnalyzer implements AstVisitor<DataType>
     {
         symbolTable.openScope("per_" + (++forCounter));
 
-        // The iterator is declared BEFORE the flag goes up: the statement shows
-        // "per (esto i : numerus 0; ...)" as the one declaration that is allowed
-        // inside a control structure.
+        // El iterador es la unica declaracion que el enunciado permite fuera de
+        // VARIABILES[ ], asi que la bandera se limpia solo para el: dentro de una
+        // funcion ya viene levantada y su "per (esto i : numerus 0; ...)" es valido.
+        boolean previousForbidden = declarationsForbidden;
+        declarationsForbidden     = false;
+
         if (node.getInitialization() != null)
         {
             node.getInitialization().accept(this);
         }
+        declarationsForbidden = previousForbidden;
+
         requireBooleanCondition(node.getCondition(), "per");
 
         if (node.getUpdate() != null)
@@ -577,7 +566,7 @@ public class SemanticAnalyzer implements AstVisitor<DataType>
     @Override
     public DataType visitIncrementStatement(IncrementStatement node)
     {
-        DataType type = node.getTarget().accept(this);
+        DataType type = operandType(node.getTarget(), node.getOperator());
 
         if (TypeSystem.incrementResult(type) == DataType.ERROR && type != DataType.ERROR)
         {
@@ -594,9 +583,9 @@ public class SemanticAnalyzer implements AstVisitor<DataType>
     @Override
     public DataType visitBinaryExpression(BinaryExpression node)
     {
-        DataType left     = node.getLeft().accept(this);
-        DataType right    = node.getRight().accept(this);
         String   operator = node.getOperator();
+        DataType left     = operandType(node.getLeft(), operator);
+        DataType right    = operandType(node.getRight(), operator);
 
         DataType result = switch (operator)
         {
@@ -608,8 +597,15 @@ public class SemanticAnalyzer implements AstVisitor<DataType>
 
         if (result == DataType.ERROR && left != DataType.ERROR && right != DataType.ERROR)
         {
-            error(node, "Operacion invalida: '" + left + "' " + operator + " '" + right + "'."
-                    + ("+".equals(operator) ? "" : " Recuerde que textum solo admite '+'."),
+            // La pista solo aplica si hay un textum de por medio: sin esta guarda
+            // salia hasta en "'Carro' == 'Carro'", donde no viene a cuento.
+            boolean concatenation = (left == DataType.TEXTUM || right == DataType.TEXTUM)
+                    && !"+".equals(operator);
+
+            error(node, "Operacion invalida: '"
+                    + describe(left, node.getLeft().getStructName()) + "' " + operator + " '"
+                    + describe(right, node.getRight().getStructName()) + "'."
+                    + (concatenation ? " Recuerde que textum solo admite '+'." : ""),
                     operator);
         }
         return typeCheck(node, result);
@@ -618,7 +614,7 @@ public class SemanticAnalyzer implements AstVisitor<DataType>
     @Override
     public DataType visitUnaryExpression(UnaryExpression node)
     {
-        DataType operand = node.getOperand().accept(this);
+        DataType operand = operandType(node.getOperand(), node.getOperator());
         DataType result  = "non".equals(node.getOperator())
                 ? TypeSystem.negationResult(operand)
                 : TypeSystem.unaryMinusResult(operand);
@@ -634,7 +630,7 @@ public class SemanticAnalyzer implements AstVisitor<DataType>
     @Override
     public DataType visitIncrementExpression(IncrementExpression node)
     {
-        DataType operand = node.getTarget().accept(this);
+        DataType operand = operandType(node.getTarget(), node.getOperator());
         DataType result  = TypeSystem.incrementResult(operand);
 
         if (result == DataType.ERROR && operand != DataType.ERROR)
@@ -672,10 +668,6 @@ public class SemanticAnalyzer implements AstVisitor<DataType>
         }
         if (symbol instanceof StructSymbol)
         {
-            // Reaching here means a type name was used where a value goes. The
-            // one legitimate use of a type name inside an expression is the
-            // "animales: Animal[7]" of a structura literal, and that path never
-            // calls accept on it (see validateArrayAttribute).
             error(node, "'" + node.getName() + "' es una structura, no una variable.",
                     node.getName());
             return typeCheck(node, DataType.ERROR);
@@ -686,11 +678,8 @@ public class SemanticAnalyzer implements AstVisitor<DataType>
         }
         else if (symbol instanceof ArraySymbol array)
         {
-            // ponytail: a bare array identifier reports its ELEMENT type, so
-            // "numeros + 1" is not rejected even though the statement says an
-            // array is not primitive. Distinguishing "the array" from "an
-            // element" needs a flag on Expression; add it only if a test file
-            // actually operates on a whole array.
+            // Reporta el tipo del ELEMENTO, que es lo que numeros[i] necesita.
+            // Operar el arreglo pelado lo corta antes operandType().
             node.setStructName(array.getElementStructName());
         }
         return typeCheck(node, symbol.getType());
@@ -709,9 +698,8 @@ public class SemanticAnalyzer implements AstVisitor<DataType>
 
         DataType elementType = node.getArray().accept(this);
 
-        // An element of "series animales : Animal" IS an Animal: the structure
-        // name has to survive the index, or a chain such as
-        // mi_selva.animales[1].nombre cannot be resolved.
+        // El nombre de la structura sobrevive al indice: sin eso no se resuelve
+        // una cadena como mi_selva.animales[1].nombre.
         node.setStructName(node.getArray().getStructName());
 
         if (node.getArray() instanceof IdentifierExpression identifier)
@@ -822,12 +810,7 @@ public class SemanticAnalyzer implements AstVisitor<DataType>
         return typeCheck(node, function.getType());
     }
 
-    /**
-     * Only reached when a { ... } shows up where it does not belong. The three
-     * legitimate places (declaring a structura variable, assigning one, and a
-     * field inside another structura literal) are intercepted by checkValue
-     * before accept is ever called.
-     */
+    /** Solo se alcanza con un { } fuera de lugar: checkValue desvia los tres validos. */
     @Override
     public DataType visitCompositeLiteralExpression(CompositeLiteralExpression node)
     {
@@ -875,10 +858,7 @@ public class SemanticAnalyzer implements AstVisitor<DataType>
         symbolTable.declare(struct);
     }
 
-    /**
-     * Runs in pass 2, when every structura is already registered, so a field
-     * whose type is another structura declared further down still resolves.
-     */
+    /** Paso 2: ya estan todas registradas, un campo puede citar una declarada despues. */
     private void validateStructFieldTypes(StructDeclaration node)
     {
         for (StructField field : node.getFields())
@@ -922,12 +902,9 @@ public class SemanticAnalyzer implements AstVisitor<DataType>
      * ================================================================= */
 
     /**
-     * Validates { nombre: "Yennifer", edad: 999 } against its structura.
-     *
-     * The pending map is what satisfies the three rules of the statement at
-     * once: the attribute name is mandatory, every attribute must be present,
-     * and the order does not matter. Iteracion II validated by POSITION, which
-     * cannot express "el orden de los atributos no importa".
+     * Valida { nombre: "Yennifer", edad: 999 } contra su structura. El mapa
+     * 'pending' cumple las tres reglas a la vez: nombre obligatorio, todos los
+     * atributos presentes, y el orden no importa.
      */
     private void validateStructLiteral(CompositeLiteralExpression literal, StructSymbol struct)
     {
@@ -982,11 +959,8 @@ public class SemanticAnalyzer implements AstVisitor<DataType>
     }
 
     /**
-     * Inside a structura an array field carries no size; the size only arrives
-     * when the variable is created, as "animales: Animal[7]" (Telegram 7/08
-     * 18:42). That parses as an index over an identifier naming the TYPE, not a
-     * variable, so it must NOT be resolved through the symbol table: doing so is
-     * what produced a false "Animal has not been declared".
+     * "animales: Animal[7]" parsea como indice sobre el nombre del TIPO, no de
+     * una variable, asi que no se resuelve contra la tabla de simbolos.
      */
     private void validateArrayAttribute(Expression value, VariableSymbol attribute)
     {
@@ -1020,11 +994,7 @@ public class SemanticAnalyzer implements AstVisitor<DataType>
      * Support
      * ================================================================= */
 
-    /**
-     * Type-checks one value against its target, routing a structure literal to
-     * validateStructLiteral instead of accept. Five callers need exactly this:
-     * variable declaration, array declaration, assignment, argument and return.
-     */
+    /** Verifica un valor contra su destino, desviando el literal de structura. */
     private DataType checkValue(Expression value, DataType targetType, String targetStruct)
     {
         if (targetType == DataType.ESTRUCTURA
@@ -1036,6 +1006,23 @@ public class SemanticAnalyzer implements AstVisitor<DataType>
             return DataType.ESTRUCTURA;
         }
         return value.accept(this);
+    }
+
+    /**
+     * Enunciado: "no se consideran primitivos los arreglos de datos". El nombre
+     * pelado de un arreglo se indexa, no se opera.
+     */
+    private DataType operandType(Expression operand, String operator)
+    {
+        if (operand instanceof IdentifierExpression identifier
+                && symbolTable.lookup(identifier.getName()) instanceof ArraySymbol)
+        {
+            error(operand, "El arreglo '" + identifier.getName() + "' no es un valor "
+                    + "primitivo y no puede operarse con '" + operator + "'; use '"
+                    + identifier.getName() + "[indice]'.", identifier.getName());
+            return typeCheck(operand, DataType.ERROR);
+        }
+        return operand.accept(this);
     }
 
     /**
@@ -1073,51 +1060,41 @@ public class SemanticAnalyzer implements AstVisitor<DataType>
     }
 
     /**
-     * "Dentro de las funciones solo se pueden definir variables al principio, no
-     * dentro de estructuras de control" (statement), confirmed by the assistant
-     * on 6/08: "Dentro de un if por ejemplo, no se deberan declarar".
+     * Enunciado: las variables solo se definen al principio de la funcion.
+     * Reporta, pero el simbolo se declara igual para no encadenar un
+     * "no declarada" en cada uso posterior.
      *
-     * The error is reported but the symbol is still declared afterwards, so a
-     * single misplaced declaration does not turn every later use of it into a
-     * second "has not been declared" error.
+     * MAIOR> queda fuera a proposito (desviacion declarada en docs/05): alli
+     * visitProgram nunca levanta la bandera.
      */
     private void requireDeclarationPlace(AstNode node, String name)
     {
-        if (inControlBlock)
+        if (declarationsForbidden)
         {
-            error(node, "'" + name + "' no puede declararse dentro de una estructura de "
-                    + "control. Las declaraciones van al inicio de la funcion, en la "
-                    + "seccion VARIABILES[ ].", name);
+            error(node, "'" + name + "' no puede declararse aqui. Las declaraciones van "
+                    + "al inicio de la funcion, en la seccion VARIABILES[ ].", name);
         }
     }
 
     private void walkLoopBody(Block body)
     {
-        boolean previousBlock = inControlBlock;
-        inControlBlock = true;
+        boolean previousForbidden = declarationsForbidden;
+        declarationsForbidden = true;
         loopDepth++;
 
         body.accept(this);
 
         loopDepth--;
-        inControlBlock = previousBlock;
+        declarationsForbidden = previousForbidden;
     }
 
     /**
-     * Value of a constant integer expression, or null when it is not constant.
-     *
-     * It returns Integer and not int on purpose: -1 is a perfectly valid index
-     * to write, so it cannot double as the "not a constant" marker. A leading
-     * minus is folded here because "numeros[-1]" parses as a unary minus over a
-     * literal, not as a negative literal.
+     * Constant value of an integer expression, or null when it is not constant.
+     * Integer and not int: -1 is a valid index, so it cannot double as the
+     * "not constant" marker.
      */
     private Integer extractInteger(Expression expression)
     {
-        if (expression instanceof UnaryExpression unary && "-".equals(unary.getOperator()))
-        {
-            Integer value = extractInteger(unary.getOperand());
-            return value == null ? null : -value;
-        }
         if (expression instanceof LiteralExpression literal
                 && literal.getType() == DataType.NUMERUS)
         {
@@ -1127,18 +1104,39 @@ public class SemanticAnalyzer implements AstVisitor<DataType>
             }
             catch (NumberFormatException ignored)
             {
-                return null;   // out of int range: not usable as a constant
+                return null;   // out of int range
             }
+        }
+        if (expression instanceof UnaryExpression unary && "-".equals(unary.getOperator()))
+        {
+            Integer value = extractInteger(unary.getOperand());
+            return value == null ? null : -value;
+        }
+        // Statement: an index "que se puede evaluar al hacer la verificacion
+        // de semantica" has to be range checked, so numeros[1 + 1] is folded.
+        if (expression instanceof BinaryExpression binary)
+        {
+            Integer left  = extractInteger(binary.getLeft());
+            Integer right = extractInteger(binary.getRight());
+
+            if (left == null || right == null)
+            {
+                return null;
+            }
+
+            return switch (binary.getOperator())
+            {
+                case "+" -> left + right;
+                case "-" -> left - right;
+                case "*" -> left * right;
+                case "/" -> right == 0 ? null : left / right;
+                default  -> null;
+            };
         }
         return null;
     }
 
-    /**
-     * How a type is named in an error message. Without this every structura
-     * reads as "structura", so "no se puede guardar 'structura' en un destino
-     * de tipo 'structura'" would be the message for assigning a Carro to a
-     * Persona, which tells the user nothing.
-     */
+    /** Como se nombra un tipo en un mensaje: "Carro", no "structura". */
     private String describe(DataType type, String structName)
     {
         return (type == DataType.ESTRUCTURA && structName != null)

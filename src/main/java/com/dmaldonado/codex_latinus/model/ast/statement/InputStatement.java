@@ -7,7 +7,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * comandante &lt;&lt;   or   &lt;&lt; comandante   or   &lt;&lt;
+ * comandante &lt;&lt;  (stores)   or   &lt;&lt;  (reads and discards).
  * Translated to %OINK_OINK.
  */
 public class InputStatement extends AstNode

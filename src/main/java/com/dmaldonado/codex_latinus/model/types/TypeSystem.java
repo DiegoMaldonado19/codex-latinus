@@ -1,16 +1,10 @@
 package com.dmaldonado.codex_latinus.model.types;
 
 /**
- * Type compatibility rules of the Latin language.
+ * Reglas de compatibilidad de tipos. Todo metodo devuelve ERROR cuando la
+ * combinacion es invalida, y el analizador sigue caminando con ese ERROR.
  *
- * Direct translation of the statement:
- *   "Siempre se considera la jerarquia mas alta de tipos para el resultado.
- *    El unico tipo de dato incompatible con todas las operaciones es el textum,
- *    el cual solo se puede concatenar con los otros (con una suma)."
- *
- * Every method returns DataType.ERROR when the combination is invalid. The
- * semantic analyzer reports it once and keeps walking with ERROR, so a single
- * mistake does not print ten messages.
+ * La tabla completa es el entregable docs/03-Tabla-de-Tipos.md
  */
 public final class TypeSystem
 {
@@ -97,23 +91,11 @@ public final class TypeSystem
     /* ================= Assignment ================= */
 
     /**
-     * Can a value of type {@code source} be stored in a variable declared as
-     * {@code target}?
+     * Puede guardarse un valor {@code source} en un destino {@code target}?
+     * Solo se ensancha (littera -> numerus -> decimalis), nunca se estrecha.
      *
-     * This table is the "Tabla de compatibilidad de tipos" the statement asks
-     * for as a documentation deliverable.
-     *
-     *  target \ source | numerus | decimalis | textum | littera | bool
-     *  ----------------+---------+-----------+--------+---------+------
-     *  numerus         |   SI    |    NO     |   NO   |   SI    |  NO
-     *  decimalis       |   SI    |    SI     |   NO   |   SI    |  NO
-     *  textum          |   NO    |    NO     |   SI   |   NO    |  NO
-     *  littera         |   NO    |    NO     |   NO   |   SI    |  NO
-     *  bool            |   NO    |    NO     |   NO   |   NO    |  SI
-     *
-     * Two different structuras are both ESTRUCTURA here, so this method says
-     * yes to them. Comparing the structure NAME is the analyzer's job
-     * (SemanticAnalyzer.assignable), because only it knows the names.
+     * Dos structuras distintas son ambas ESTRUCTURA aqui: comparar el NOMBRE le
+     * toca a SemanticAnalyzer.assignable, que es quien los conoce.
      */
     public static boolean isAssignable(DataType target, DataType source)
     {
