@@ -4,7 +4,7 @@
 //   2. codigo no rastreable, ya se devolvio un valor
 //   3. la funcion no siempre retorna un valor
 // Mas un cuarto error real que el enunciado no anota: declarar dentro de
-// un 'si' (Telegram 6/08 20:04).
+// un 'si'
 
 MUNERA>
 

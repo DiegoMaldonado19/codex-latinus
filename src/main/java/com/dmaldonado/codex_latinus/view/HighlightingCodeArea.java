@@ -15,44 +15,38 @@ import org.fxmisc.richtext.model.StyleSpansBuilder;
 
 /**
  * El editor colorea con el LatinLexer REAL. El catedratico exigio que el color
- * saliera del analisis lexico propio y no de un plugin (Telegram 12/08):
+ * saliera del analisis lexico propio y no de un plugin:
  * RichTextFX solo pinta los spans.
  *
  * Por eso es la unica clase de la vista que importa ANTLR, y lo que compara es
  * el TIPO de token, nunca el texto de la palabra.
  */
-public final class HighlightingCodeArea
-{
+public final class HighlightingCodeArea {
     private static final Logger LOGGER = Logger.getLogger(HighlightingCodeArea.class.getName());
 
     private static final Set<Integer> KEYWORD_TOKENS = Set.of(
-        LatinLexer.VARIABILES, LatinLexer.VARIABILES_LOCAL, LatinLexer.MUNERA,
-        LatinLexer.MAIOR,      LatinLexer.FIN_PROGRAMA,     LatinLexer.ESTO,
-        LatinLexer.SERIES,     LatinLexer.STRUCTURA,        LatinLexer.FINIS,
-        LatinLexer.SI,         LatinLexer.ALITER,           LatinLexer.DUM,
-        LatinLexer.FACERE,     LatinLexer.PER,              LatinLexer.PERGE,
-        LatinLexer.INTERRUMPE, LatinLexer.ACTIO,            LatinLexer.RATIO,
-        LatinLexer.REDDERE,    LatinLexer.NON
-    );
+            LatinLexer.VARIABILES, LatinLexer.VARIABILES_LOCAL, LatinLexer.MUNERA,
+            LatinLexer.MAIOR, LatinLexer.FIN_PROGRAMA, LatinLexer.ESTO,
+            LatinLexer.SERIES, LatinLexer.STRUCTURA, LatinLexer.FINIS,
+            LatinLexer.SI, LatinLexer.ALITER, LatinLexer.DUM,
+            LatinLexer.FACERE, LatinLexer.PER, LatinLexer.PERGE,
+            LatinLexer.INTERRUMPE, LatinLexer.ACTIO, LatinLexer.RATIO,
+            LatinLexer.REDDERE, LatinLexer.NON);
 
     private static final Set<Integer> TYPE_TOKENS = Set.of(
-        LatinLexer.NUMERUS, LatinLexer.DECIMALIS, LatinLexer.TEXTUM,
-        LatinLexer.LITTERA, LatinLexer.BOOL,      LatinLexer.VERUM,
-        LatinLexer.FALSUS
-    );
+            LatinLexer.NUMERUS, LatinLexer.DECIMALIS, LatinLexer.TEXTUM,
+            LatinLexer.LITTERA, LatinLexer.BOOL, LatinLexer.VERUM,
+            LatinLexer.FALSUS);
 
-    private HighlightingCodeArea()
-    {
+    private HighlightingCodeArea() {
     }
 
-    public static CodeArea create()
-    {
+    public static CodeArea create() {
         CodeArea codeArea = new CodeArea();
 
         codeArea.setParagraphGraphicFactory(LineNumberFactory.get(codeArea));
         codeArea.getStyleClass().add("latin-editor");
-        codeArea.textProperty().addListener((observable, oldText, newText) ->
-                applyHighlighting(codeArea, newText));
+        codeArea.textProperty().addListener((observable, oldText, newText) -> applyHighlighting(codeArea, newText));
 
         return codeArea;
     }
@@ -64,14 +58,10 @@ public final class HighlightingCodeArea
      * lleva mensaje, archivo y numero de linea) y el texto se queda sin estilo
      * en vez de dejar el editor mudo.
      */
-    private static void applyHighlighting(CodeArea codeArea, String text)
-    {
-        try
-        {
+    private static void applyHighlighting(CodeArea codeArea, String text) {
+        try {
             codeArea.setStyleSpans(0, computeHighlighting(text));
-        }
-        catch (RuntimeException exception)
-        {
+        } catch (RuntimeException exception) {
             LOGGER.log(Level.SEVERE, "No se pudo colorear el texto del editor.", exception);
         }
     }
@@ -83,16 +73,14 @@ public final class HighlightingCodeArea
      * ponytail: se re-lexa el documento entero en cada tecla. Si alguna vez se
      * siente lento, alimentarlo desde codeArea.multiPlainChanges().
      */
-    static StyleSpans<Collection<String>> computeHighlighting(String text)
-    {
+    static StyleSpans<Collection<String>> computeHighlighting(String text) {
         // create() lanza si no se agrego ni un span, y el editor arranca vacio.
-        if (text.isEmpty())
-        {
+        if (text.isEmpty()) {
             return StyleSpans.<Collection<String>>singleton(Collections.emptyList(), 0);
         }
 
         LatinLexer lexer = new LatinLexer(CharStreams.fromString(text));
-        lexer.removeErrorListeners();   // half typed code is the normal state here
+        lexer.removeErrorListeners(); // half typed code is the normal state here
 
         StyleSpansBuilder<Collection<String>> builder = new StyleSpansBuilder<>();
 
@@ -104,36 +92,33 @@ public final class HighlightingCodeArea
         // CharStreams.fromString indexa por puntos de codigo y String por
         // chars, asi que con un emoji los indices del lexer se desalinean y
         // todo lo que va detras se colorearia corrido.
-        for (Token token : lexer.getAllTokens())
-        {
+        for (Token token : lexer.getAllTokens()) {
             builder.add(Collections.singleton(styleClassFor(token.getType())),
-                        token.getText().length());
+                    token.getText().length());
         }
         return builder.create();
     }
 
-    private static String styleClassFor(int tokenType)
-    {
-        if (KEYWORD_TOKENS.contains(tokenType))
-        {
+    private static String styleClassFor(int tokenType) {
+        if (KEYWORD_TOKENS.contains(tokenType)) {
             return "keyword";
         }
-        if (TYPE_TOKENS.contains(tokenType))
-        {
+        if (TYPE_TOKENS.contains(tokenType)) {
             return "type";
         }
 
-        return switch (tokenType)
-        {
-            case LatinLexer.ENTERO, LatinLexer.DECIMAL           -> "number";
-            case LatinLexer.TEXTO, LatinLexer.CARACTER           -> "string";
+        return switch (tokenType) {
+            case LatinLexer.ENTERO, LatinLexer.DECIMAL -> "number";
+            case LatinLexer.TEXTO, LatinLexer.CARACTER -> "string";
             case LatinLexer.COMENTARIO_LINEA,
-                 LatinLexer.COMENTARIO_BLOQUE                    -> "comment";
+                    LatinLexer.COMENTARIO_BLOQUE ->
+                "comment";
             case LatinLexer.TEXTO_SIN_CERRAR,
-                 LatinLexer.CARACTER_SIN_CERRAR,
-                 LatinLexer.COMENTARIO_SIN_CERRAR,
-                 LatinLexer.CARACTER_INVALIDO                    -> "invalid";
-            default                                              -> "plain";
+                    LatinLexer.CARACTER_SIN_CERRAR,
+                    LatinLexer.COMENTARIO_SIN_CERRAR,
+                    LatinLexer.CARACTER_INVALIDO ->
+                "invalid";
+            default -> "plain";
         };
     }
 }

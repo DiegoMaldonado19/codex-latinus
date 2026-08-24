@@ -1,14 +1,5 @@
 lexer grammar LatinLexer;
 
-/* =====================================================================
- *  LEXER DEL LENGUAJE LATIN  (.lat)
- *
- *  El ORDEN de las reglas es la prioridad ante empates de longitud:
- *  literales largos antes que cortos, y palabras reservadas antes que ID.
- *
- *  Especificacion completa: docs/02-Especificacion-del-Lenguaje.md
- * ===================================================================== */
-
 /* ---------- 1. Marcadores de seccion --------------------------------- */
 VARIABILES       : 'VARIABILES>' ;
 VARIABILES_LOCAL : 'VARIABILES[' ;   // seccion de variables dentro de una funcion
@@ -49,7 +40,7 @@ REDDERE    : 'reddere' ;
 // Negacion logica
 NON        : 'non' ;
 
-/* ---------- 3. Operadores de 2 caracteres (antes que los de 1) ------ */
+/* ---------- 3. Operadores de 2 caracteres ------ */
 ENTRADA     : '<<' ;                 // lectura de consola
 SALIDA      : '>>' ;                 // impresion en consola
 INCREMENTO  : '++' ;
@@ -83,7 +74,7 @@ COMA       : ',' ;
 PUNTO      : '.' ;
 
 /* ---------- 6. Literales -------------------------------------------- */
-DECIMAL   : DIGITO+ '.' DIGITO+ ;    // antes que ENTERO: 9.81 no es 9 . 81
+DECIMAL   : DIGITO+ '.' DIGITO+ ;    // antes que ENTERO
 ENTERO    : DIGITO+ ;
 TEXTO     : '"' ( ESCAPE | ~["\\\r\n] )* '"' ;
 CARACTER  : '\'' ( ESCAPE | ~['\\\r\n] ) '\'' ;
@@ -99,11 +90,7 @@ COMENTARIO_LINEA  : '//' ~[\r\n]* -> channel(HIDDEN) ;
 COMENTARIO_BLOQUE : '/*' .*? '*/' -> channel(HIDDEN) ;
 ESPACIOS          : [ \t\r\n\f]+  -> channel(HIDDEN) ;
 
-/* ---------- 9. Recuperacion lexica -----------------------------------
- * Las tres primeras van DESPUES de su version bien formada: ANTLR toma la
- * coincidencia mas larga y la cerrada siempre lo es, asi que "abc" sigue
- * siendo TEXTO. CARACTER_INVALIDO cierra como cajon de sastre.
- * -------------------------------------------------------------------- */
+/* ---------- 9. Errores lexicos -------- */
 TEXTO_SIN_CERRAR      : '"'  ( ESCAPE | ~["\\\r\n] )* ;
 CARACTER_SIN_CERRAR   : '\'' ( ESCAPE | ~['\\\r\n] )? ;
 COMENTARIO_SIN_CERRAR : '/*' ( ~'*' | '*' ~'/' )* '*'? ;

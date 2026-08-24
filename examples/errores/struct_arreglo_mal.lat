@@ -1,5 +1,5 @@
 // Espera (G3): un atributo declarado 'series' dentro de una structura se
-// instancia con su tamano, "animales: Animal[7]". Telegram 7/08 18:42.
+// instancia con su tamano, "animales: Animal[7]".
 VARIABILES>
 
 structura Animal {
